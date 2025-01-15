@@ -299,7 +299,7 @@ n0 = observed_cells #import from stats at beginning
 np.set_printoptions(suppress=True)
 
 
-def load_df(file, remove_cols=['RSP'], subset=['PM','AM','A','RL','AL','LM']):
+def load_df(file, remove_cols=None, subset=None):
     """
     Loads excel file specified in file which is a string for the full path
     Excel should have column names as the first row (header)
