@@ -52,7 +52,7 @@ data_file = args.data_file
 alpha = args.alpha
 target_umi_min = args.target_umi_min
 sample_labels = args.labels.split(",") if args.labels else None
-special_area_1 = agrs.special_area_1
+special_area_1 = args.special_area_1
 special_area_2 = args.special_area_2
 
 # Ensure output directory exists
