@@ -9,8 +9,11 @@ Any code found here is a work in progress with no guarantee that it will work un
 Run --help to see arguments.
 
 **-0** = path to your output directory
+
 **-d** = path to your nbcm.tsv
+
 **-s** = prefix for your saved files
+
 **-l** = list of your columns in the tsv (Example:"area,area,area,neg,area") You must use 'neg' for any columns containing negative controls. You can use whatever names you want for samples but avoid spaces and characters. The code will try to sort samples if you have repeat values (visp1,visp2,visp3,audp1,audp2...)
 
 **alpha** will default but you can set it if you like, see the script for comments.
@@ -18,6 +21,7 @@ Run --help to see arguments.
 **target_umi_min** = filter for low counts in the matrix eg some_row_[0,1,0,35,12,1,0,120,1,0] will be filtered with the default value of 2 to some_row_[0,0,35,12,0,0,120,0,0].
 
 If you get the upsetplots out then you got all the way through.
+
 
 **BUGS**
 There are a few bugs presently. 
