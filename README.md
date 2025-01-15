@@ -1,7 +1,7 @@
 # mapseq_processing_jacobs
 MAPseq processing code based on previous works and designed to be used with the CSHL python pipeline.
 
-Any code found here is a work in progress with no guarantee that it will work until otherwise stated.
+Any code found here is a work in progress with no guarantee that it will do what it claims until otherwise stated.
 
 **Before you run:**
  Setup a conda environment and the listed dependencies. All should be available in bioconda, conda-forge, and the default.
