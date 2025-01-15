@@ -33,5 +33,3 @@ There are a few bugs presently.
 1.The plots are not all in a format that I love.
 
 2. [334]&[723] order_partial is not dynamically defined
-
-3. [215] Stats relying on two specific areas being found in the labels. Still Broken.
