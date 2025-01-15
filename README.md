@@ -16,6 +16,10 @@ Run --help to see arguments.
 
 **-l** = list of your columns in the tsv (Example:"area,area,area,neg,area") You must use 'neg' for any columns containing negative controls. You can use whatever names you want for samples but avoid spaces and characters. The code will try to sort samples if you have repeat values (visp1,visp2,visp3,audp1,audp2...)
 
+**-A** = Label from your labels to match for the first important area (e.g., 'AL') Must match something in your labels!
+
+**-B** = Label from your labels to match for the second important area (e.g., 'PM') Must match something in your labels!
+
 **alpha** will default but you can set it if you like, see the script for comments.
 
 **target_umi_min** = filter for low counts in the matrix eg some_row_[0,1,0,35,12,1,0,120,1,0] will be filtered with the default value of 2 to some_row_[0,0,35,12,0,0,120,0,0].
