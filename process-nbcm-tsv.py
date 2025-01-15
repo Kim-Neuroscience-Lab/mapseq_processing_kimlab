@@ -38,6 +38,9 @@ parser.add_argument(
     type=str,
     help="Comma-separated column labels (e.g., 'target1,target2,target3,target-neg-bio'). These need to match your NBCM columns, and you MUST use the exact label 'neg' in any negative control column."
 )
+parser.add_argument("-A","--special_area_1", type=str, required=True, help="One of your favorite target areas")
+parser.add_argument("-B","--special_area_2", type=str, required=True, help="Another of your favorite target areas to compare to the first")
+
 
 # Parse arguments
 args = parser.parse_args()
@@ -49,6 +52,8 @@ data_file = args.data_file
 alpha = args.alpha
 target_umi_min = args.target_umi_min
 sample_labels = args.labels.split(",") if args.labels else None
+special_area_1 = agrs.special_area_1
+special_area_2 = args.special_area_2
 
 # Ensure output directory exists
 os.makedirs(out_dir, exist_ok=True)
@@ -212,19 +217,18 @@ if solution:
 else:
     raise ValueError("No valid solution for p_e found.")
 
-###THIS NEEDS TO BE UPDATED TO ALLOW SELECTION OF IMPORTANT AREAS TO COMPARE!!!!
 # Numerical Calculations using dynamic sample_labels
-# Dynamically match labels for 'AL' and 'PM'
-al_label = next((label for label in sample_labels if re.match(r"AL\d*", label)), None)
-pm_label = next((label for label in sample_labels if re.match(r"PM\d*", label)), None)
+# Dynamically match labels for important areas
+special_area_1_label = next((label for label in sample_labels if re.match(f"{args.special_area_1}\\d*", label)), None)
+special_area_2_label = next((label for label in sample_labels if re.match(f"{args.special_area_2}\\d*", label)), None)
 
-if al_label and pm_label:
-    print(f"Matched labels: {al_label}, {pm_label}")
+if special_area_1_label and special_area_2_label:
+    print(f"Matched labels: {special_area_1_label}, {special_area_2_label}")
     # Replace hardcoded logic with dynamic labels
-    scaled_value = psdict[al_label] * psdict[pm_label]
+    scaled_value = psdict[special_area_1_label] * psdict[special_area_2_label]
     print(f"Scaled Value: {scaled_value}")
 else:
-    raise KeyError("Required labels matching 'AL' or 'PM' are not found in sample_labels.")
+    raise KeyError(f"Required labels matching '{args.special_area_1}' or '{args.special_area_2}' are not found in sample_labels.")
 
 # Dynamic calculation using sample_labels and total_projections
 calculated_value = (1 - (1 - pe_num)**len(sample_labels)) * total_projections
