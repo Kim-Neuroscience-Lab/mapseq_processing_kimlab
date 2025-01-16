@@ -121,8 +121,8 @@ def clean_and_filter(matrix, sample_labels):
     # Step 3: Remove rows with all zeros
     matrix = matrix[np.any(matrix, axis=1)]  # Keep rows with at least one non-zero value
 
-    # Step 4: Remove rows with all zero target values (excluding the last column)
-    matrix = matrix[np.any(matrix[:, :-1], axis=1)]
+    # Step 4: Set all values in the matrix below the threshold (e.g., 2) to 0
+    matrix[matrix < target_umi_min] = 0
 
     # Step 5: Dynamically identify and filter 'neg' columns
     neg_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower()]
@@ -132,8 +132,6 @@ def clean_and_filter(matrix, sample_labels):
         for neg_col in neg_columns:
             matrix = matrix[matrix[:, neg_col] <= 0]  # Adjust filtering for each 'neg' column
 
-    # Step 6: Apply a threshold filter
-    matrix = matrix[np.amax(matrix[:, :-1], axis=1) >= 2]  # Threshold of 2 for the row max (excluding last column)
 
     return matrix
 
