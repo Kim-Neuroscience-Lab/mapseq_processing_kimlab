@@ -2,20 +2,22 @@ import argparse
 import os
 import re
 import sympy
+import csv
 import numpy as np
 import pandas as pd
-from sympy import symbols, Product, Array, N
+from sympy import symbols, Product, Array, N, latex
 from sympy.printing import latex
 import matplotlib as mpl
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.gridspec as gridspec
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import patches
 import seaborn as sn
 from scipy.spatial.distance import pdist
 from sklearn.manifold import TSNE
-from scipy.stats import friedmanchisquare, kruskal, binomtest
+from scipy.stats import friedmanchisquare, kruskal, binomtest, binom
 from sklearn.cluster import k_means
 from sklearn.preprocessing import normalize 
 import itertools
@@ -38,8 +40,14 @@ parser.add_argument(
     type=str,
     help="Comma-separated column labels (e.g., 'target1,target2,target3,target-neg-bio'). These need to match your NBCM columns, and you MUST use the exact label 'neg' in any negative control column and 'inj' in any injection column"
 )
-parser.add_argument("-A","--special_area_1", type=str, required=True, help="One of your favorite target areas")
-parser.add_argument("-B","--special_area_2", type=str, required=True, help="Another of your favorite target areas to compare to the first")
+parser.add_argument("-A","--special_area_1", type=str, required=False, help="One of your favorite target areas")
+parser.add_argument("-B","--special_area_2", type=str, required=False, help="Another of your favorite target areas to compare to the first")
+parser.add_argument(
+    "-f", "--apply_outlier_filtering", 
+    action="store_true", 
+    help="Enable outlier filtering (Step 7) using mean + 2*std deviation."
+)
+
 
 
 # Parse arguments
@@ -58,25 +66,30 @@ special_area_2 = args.special_area_2
 # Ensure output directory exists
 os.makedirs(out_dir, exist_ok=True)
 
-### User Configuration
-
-# Directories and Save Name if the argparse doesnt work.
-#out_dir = "/mnt/d/mapseq/test/output/"
-#save_name = "P3_combined"
-#data_file = r'/mnt/d/mapseq/test/data/p3_nbcm_combined_for-preprocess - Sheet1.csv'  ##This is your nbcm (individuals are provided by CSHL python code output. A combined file could be made by hand."
-
-#This switch is for excluding some columns. See like 254
+#This switch is for excluding some columns. See line 254
 full_data = True
 motif_join = '+'
 
 ### Helper Functions
 
 def calculate_projections_from_matrix(matrix, sample_labels):
-    """Calculate projections from the matrix for each label."""
-    column_counts = {region: np.count_nonzero(matrix[:, idx]) for idx, region in enumerate(sample_labels)}
-    print(f"Column counts: {column_counts}")
-    return column_counts
+    """Calculate TOTAL projections per region (including multiple per neuron).
 
+    1. column_counts: Iterates through each column (indexed by idx). Counts the number of nonzero values in that column using np.count_nonzero(). This counts how many neurons project to each brain region. Stores results in a dictionary.
+    2. **commented out*** total_projections: 'matrix > 0' creates a Boolean mask where True (1) means a projection exists. False (0) means no projection. 'np.sum(matrix > 0)' counts all nonzero elements across the entire matrix.Counts how many cells (neurons) project to any region (ignoring magnitude). Does not account for projection strength—it treats all values > 0 the same.
+This gives an idea of how many neurons are connected, but not their relative strengths.
+    3. total_projections: Sums column-wise counts instead. Uses actual projection strength values instead of just binary presence. This is the approach used by Kheirbeck Lab's codebook.
+    
+    """
+    
+    column_counts = {region: np.count_nonzero(matrix[:, idx]) for idx, region in enumerate(sample_labels)}
+    #total_projections = int(np.sum(matrix > 0)) #counts all projections as a 1 regardless of strength.
+    total_projections = sum(column_counts.values())  # sums all the column counts like Kheirbeck lab does
+    
+    print(f"Column counts (neurons per region): {column_counts}")
+    print(f"Total projections (Sums column-wise counts): {total_projections}")
+    
+    return column_counts, total_projections
 
 def calculate_total_projections(projections):
     return sum(projections.values())
@@ -91,13 +104,19 @@ def solve_for_roots(projections, observed_cells):
     return roots, pi
 
 def save_latex_expression(expression, title, filename):
-    latex_output = latex(expression)
-    plt.figure(figsize=(10, 6))
-    plt.text(0.5, 0.5, f"${latex_output}$", fontsize=14, va='center', ha='center', wrap=True)
-    plt.axis('off')
+    """
+    Properly renders and saves a LaTeX equation image.
+    """
+    latex_output = r"$" + latex(expression) + r"$"  # Use single-dollar format
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.text(0.5, 0.5, latex_output, fontsize=16, va='center', ha='center', transform=ax.transAxes)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_frame_on(False)  # Remove borders
+
     plt.title(title, fontsize=16)
-    plt.tight_layout()
-    plt.savefig(filename, bbox_inches='tight')
+    plt.savefig(filename, bbox_inches='tight', dpi=300)
     plt.close()
 
 def calculate_probabilities(projections, total_projections):
@@ -107,78 +126,140 @@ def binomial_test(value, total, probability):
     return binomtest(value, n=total, p=probability).pvalue
 
 def normalize_rows(matrix):
-    """Normalize rows of a matrix by their maximum value."""
+    """
+    Normalize each row by its maximum value.
+    - If the max value is 0, the row remains unchanged.
+    - Prevents division errors.
+
+    Args:
+        matrix (np.ndarray): Input matrix.
+
+    Returns:
+        np.ndarray: Normalized matrix.
+    """
+    if matrix.shape[0] == 0:  # 🚨 If empty, return immediately
+        print("⚠ WARNING: Normalized matrix is empty. Skipping normalization.")
+        return matrix
+
     return np.apply_along_axis(lambda x: x / np.amax(x) if np.amax(x) > 0 else x, axis=1, arr=matrix)
 
-def clean_and_filter(matrix, sample_labels, target_umi_min):
+def clean_and_filter(matrix, sample_labels, target_umi_min, apply_outlier_filtering=False):
     """
     Clean and filter the matrix:
-    1. Remove rows where any value in 'neg' columns exceeds 0.
-    2. Remove rows where any value in the row is >= the corresponding value in the 'inj' column.
-    3. Remove rows where any value in the non-`neg` and non-`inj` columns exceeds mean + 2 * std.
+    - Remove header row and barcode column
+    - Remove zero-projection rows
+    - Remove rows where any 'neg' column has a nonzero value
+    - Remove rows where any value >= the corresponding 'inj' column value
+    - Apply UMI threshold and optionally remove high UMI outliers
     """
-    # Step 1: Remove the header row
-    matrix = matrix[1:, :]  # Skip the first row (header)
+    # 🚨 Step 1: Remove headers & barcode column
+    matrix = matrix[1:, 1:]
+    print(f"🔍 Step 1: Removed headers & barcode. Shape: {matrix.shape}")
 
-    # Step 2: Remove the first column (unique identifiers)
-    matrix = matrix[:, 1:]  # Remove the first column
+    # 🚨 Step 2: Remove rows with all zeros
+    matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
+    print(f"🔍 Step 2: Removed zero-projection rows. Shape: {matrix.shape}")
 
-    # Step 3: Remove rows with all zeros
-    matrix = matrix[np.any(matrix, axis=1)]  # Keep rows with at least one non-zero value
-
-    # Step 4: Set all values in the matrix below the threshold (e.g., 2) to 0
-    matrix[matrix < target_umi_min] = 0
-
-    # Step 5: Dynamically identify and filter 'neg' columns
+    # 🚨 Step 3: Remove rows where any 'neg' column has a nonzero value
     neg_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower()]
-    if not neg_columns:
-        print("No columns containing 'neg' found. Skipping Step 5.")
+    if neg_columns:
+        matrix = matrix[np.all(matrix[:, neg_columns] == 0, axis=1)]
+    print(f"🔍 Step 3: Removed rows with 'neg' > 0. Shape: {matrix.shape}")
+
+    # 🚨 Step 4: Remove rows where any value >= the corresponding 'inj' column value
+    if "inj" in sample_labels:
+        inj_col_idx = sample_labels.index("inj")
+        inj_values = matrix[:, inj_col_idx]  # Extract the 'inj' column values
+        
+        # Debugging information for 'inj' values
+        print(f"🔍 Step 4 Debug: 'inj' column detected at index {inj_col_idx}")
+        print(f"🔍 Step 4 Debug: 'inj' values min: {np.min(inj_values)}, max: {np.max(inj_values)}, mean: {np.mean(inj_values)}")
+        
+        # Perform row-wise comparison excluding the 'inj' column itself
+        mask = (
+            np.all(matrix[:, :inj_col_idx] < inj_values[:, None], axis=1) &  # Check values before 'inj' column
+            np.all(matrix[:, inj_col_idx + 1:] < inj_values[:, None], axis=1)  # Check values after 'inj' column
+        )
+        
+        # Apply the mask to filter rows
+        matrix = matrix[mask]
+        print(f"🔍 Step 4: Removed rows with values >= 'inj'. Shape: {matrix.shape}")
     else:
-        for neg_col in neg_columns:
-            matrix = matrix[matrix[:, neg_col] <= 0]  # Adjust filtering for each 'neg' column
+        print("⚠ WARNING: 'inj' column not found in sample labels. Skipping this step.")
 
-    # Step 6: Dynamically filter rows based on the 'inj' column
-    inj_col_idx = sample_labels.index("inj")  # Find the 'inj' column index
-    filtered_matrix = []
-    for row in matrix:
-        inj_value = row[inj_col_idx]
-        if not any(row[i] >= inj_value for i in range(len(row)) if i != inj_col_idx):
-            filtered_matrix.append(row)
-    filtered_matrix = np.array(filtered_matrix)
+    # 🚨 Step 5: Apply UMI threshold
+    matrix[matrix < target_umi_min] = 0
+    num_zero_after_threshold = np.sum(np.sum(matrix > 0, axis=1) == 0)
+    print(f"🚨 Step 5: Applied threshold ({target_umi_min}). New zero rows: {num_zero_after_threshold}")
 
-    # Step 7: Remove rows with outliers (mean+2STDDEV) in targets
-    non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
-    if non_neg_inj_cols:
-        mean_values = np.mean(filtered_matrix[:, non_neg_inj_cols], axis=0)
-        std_values = np.std(filtered_matrix[:, non_neg_inj_cols], axis=0)
-        upper_threshold = mean_values + 2 * std_values
+    # 🚨 Step 5b: Remove rows that became all zeros after thresholding
+    matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
+    print(f"🔍 Step 5b: Removed new zero rows. Shape: {matrix.shape}")
 
-        # Keep rows where all values in the subset are below the threshold
-        final_filtered_matrix = []
-        for row in filtered_matrix:
-            if all(row[i] <= upper_threshold[idx] for idx, i in enumerate(non_neg_inj_cols)):
-                final_filtered_matrix.append(row)
+    # 🚨 Step 6: Apply optional high-UMI outlier filtering
+    if apply_outlier_filtering:
+        non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
+        if non_neg_inj_cols:
+            mean_values = np.mean(matrix[:, non_neg_inj_cols], axis=0)
+            std_values = np.std(matrix[:, non_neg_inj_cols], axis=0)
+            upper_threshold = mean_values + 2 * std_values
 
-        filtered_matrix = np.array(final_filtered_matrix)
+            # Keep rows where all values in the subset are below the threshold
+            filtered_matrix = []
+            for row in matrix:
+                if all(row[i] <= upper_threshold[idx] for idx, i in enumerate(non_neg_inj_cols)):
+                    filtered_matrix.append(row)
 
-    return filtered_matrix
+            matrix = np.array(filtered_matrix)
+        print(f"🔍 Step 6: Removed high-UMI outliers. Shape: {matrix.shape}")
 
+    return matrix
+
+def compute_motif_probabilities(pe_num, total_regions):
+    """
+    Compute probabilities for each possible motif type.
+    
+    Args:
+    - pe_num (float): Probability of an edge (p_e).
+    - total_regions (int): Number of brain regions.
+
+    Returns:
+    - motif_probs (dict): Dictionary with motif type as key and probability as value.
+    """
+    # Ensure pe_num is a native float
+    pe_num = float(pe_num)
+
+    # Compute motif probabilities using safe probability mass function (PMF)
+    motif_probs = {
+        n: (pe_num ** n) * ((1 - pe_num) ** (total_regions - n))
+        for n in range(1, total_regions + 1)
+    }
+    
+    return motif_probs
 
 
 ### Main Calculations
 
 # Load barcodes
-barcodematrix = np.genfromtxt(data_file, delimiter='\t') #You can change this delimiter to "," if you are using a custom CSV file rather than the core provided TSV.
+    """
+    Note that you can change this delimiter to ',' if you are using a custom CSV file rather than the core provided TSV.
+    """
+barcodematrix = np.genfromtxt(data_file, delimiter='\t')
 barcodematrix = np.array(barcodematrix, dtype=np.float64)
 print("Barcode Matrix Shape:", barcodematrix.shape)
 
-# Perform cleaning and filtering
-filtered_matrix = clean_and_filter(barcodematrix, sample_labels, target_umi_min)
-print("Filtered Matrix Shape:", filtered_matrix.shape)
+#check zeros before filtering
+num_zero_before = np.sum(np.sum(barcodematrix > 0, axis=1) == 0)
+print(f"🔍 BEFORE ANY FILTERING: Neurons with Zero Projections: {num_zero_before}")
 
-# Normalize rows of the filtered matrix (after removing neg and inj columns)
-normalized_matrix = normalize_rows(filtered_matrix)
-print("Normalized Matrix Shape:", normalized_matrix.shape)
+
+# Perform cleaning and filtering
+apply_outlier_filtering = args.apply_outlier_filtering  # Get argument value
+
+filtered_matrix = clean_and_filter(
+    barcodematrix, sample_labels, target_umi_min, apply_outlier_filtering
+)
+print("Filtered Matrix Shape:", filtered_matrix.shape)
 
 # Drop "neg" and "inj" columns from the filtered matrix
 neg_inj_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower() or label == "inj"]
@@ -188,31 +269,52 @@ if neg_inj_columns:
 else:
     print("No 'neg' or 'inj' columns found. Skipping column removal.")
 
-# Update the columns list dynamically to match the remaining columns
+# Update the columns list to match the remaining matrix columns
 columns = [label for i, label in enumerate(sample_labels) if i not in neg_inj_columns]
 print(f"Updated column headers: {columns}")
 
+# Normalize rows of the filtered matrix (AFTER dropping columns)
+normalized_matrix = normalize_rows(filtered_matrix)
+print(f"Normalized Matrix Shape: {normalized_matrix.shape}")
 
-# Save the normalized matrix to CSV with accurate headers
+# 🚨 Final Step: Remove rows with all zeros after normalization
+normalized_matrix = normalized_matrix[np.sum(normalized_matrix > 0, axis=1) > 0]
+print(f"🔍 Final Step: Removed all-zero rows post-normalization. Shape: {normalized_matrix.shape}")
+
+# Recalculate Observed Cells after all filtering steps
+observed_cells = normalized_matrix.shape[0]  # Update Observed Cells count
+print(f"Updated Observed Cells: {observed_cells}")
+
+# Verify alignment before saving
+assert normalized_matrix.shape[1] == len(columns), (
+    f"Mismatch: Normalized matrix columns {normalized_matrix.shape[1]}, headers {len(columns)}"
+)
+
+# Save the normalized matrix to CSV for future analysis in the script
 normalized_matrix_file = os.path.join(out_dir, f"{save_name}_Normalized_Matrix.csv")
 pd.DataFrame(normalized_matrix, columns=columns).to_csv(normalized_matrix_file, index=False, float_format="%.8f")
 print(f"Normalized matrix saved to: {normalized_matrix_file}")
 
-# Calculate observed cells dynamically
-observed_cells = filtered_matrix.shape[0]  # Number of rows after filtering
-print(f"Observed Cells: {observed_cells}")
-
 # Calculate projections dynamically from the filtered matrix
-projections = calculate_projections_from_matrix(filtered_matrix, columns)
-print("Projections:", projections)
+"""
+    See the associated function
+"""
+projections, total_projections = calculate_projections_from_matrix(normalized_matrix, columns)
 
-# Calculate total projections
-total_projections = calculate_total_projections(projections)
-print(f"Total Projections: {total_projections}")
-
-# Solve for roots and simplify Pi
+# Solve for N0
 roots, pi = solve_for_roots(projections, observed_cells)
-print("Roots:", roots)
+print("All Roots for N0:", roots)  # Print all calculated roots
+
+# Filter for real, positive roots that are also greater than observed_cells
+valid_N0 = [root for root in roots if root.is_real and root > observed_cells]
+
+if valid_N0:
+    # Choose the largest valid N0 (assuming overestimation is safer)
+    N0_value = max(valid_N0)  
+    print(f"Selected N0: {N0_value}, which is greater than observed_cells ({observed_cells}).")
+else:
+    raise ValueError(f"No valid positive real root found for N0 that is greater than observed_cells ({observed_cells}).")
+
 
 simplified_pi = sympy.simplify(pi)
 print("Simplified Pi:", simplified_pi)
@@ -224,26 +326,79 @@ save_latex_expression(simplified_pi, "Simplified Pi Visualization", os.path.join
 psdict = calculate_probabilities(projections, total_projections)
 print("Region-specific Probabilities:", psdict)
 
-# Solve for p_e
+# Solve for symbolic p_e
+#pe = symbols('p_e')
+#solution = sympy.solve((1 - (1 - pe)**len(projections)) * total_projections - observed_cells, [pe], force=True)
+#if solution:
+#    # Debug the solution
+#    print(f"Solution[0]: {solution[0]}")
+#
+#    # Filter for real solutions
+#    real_solutions = [sol.evalf() for sol in solution if sol.is_real #and 0 < sol < 1]
+#    if not real_solutions:
+#        raise ValueError("No valid probability solution for p_e in #range (0,1).")
+#
+#    # Use the first real solution
+#    pe_num = float(real_solutions[0])
+#    print(f"Using real solution: {pe_num}")
+#
+#    print("Derived p_e:", pe_num)
+#else:
+#    raise ValueError("No valid solution for p_e found.")
+
+# Define symbolic variable for p_e
 pe = symbols('p_e')
-#pe = pe_num
-solution = sympy.solve((1 - (1 - pe)**len(projections)) * total_projections - observed_cells, [pe], force=True)
-if solution:
-    # Debug the solution
-    print(f"Solution[0]: {solution[0]}")
 
-    # Filter for real solutions
-    real_solutions = [sol.evalf() for sol in solution if sol.is_real]
-    if not real_solutions:
-        raise ValueError("No real solutions found.")
+# Solve for symbolic p_e
+pe_solutions = sympy.solve((1 - (1 - pe)**len(projections)) * total_projections - observed_cells, pe, force=True)
 
-    # Use the first real solution
-    pe_num = float(real_solutions[0])
-    print(f"Using real solution: {pe_num}")
+# Extract only real solutions within (0,1)
+valid_symbolic_solutions = [sol.evalf() for sol in pe_solutions if sol.is_real and 0 < sol < 1]
 
-    print("Derived p_e:", pe_num)
-else:
-    raise ValueError("No valid solution for p_e found.")
+# Compute empirical p_e
+pe_empirical = np.mean(list(psdict.values()))
+
+# Pick the best estimate: FIRST valid symbolic solution or fallback to empirical
+#pe_num = valid_symbolic_solutions[0] if valid_symbolic_solutions else pe_empirical
+
+# Pick the best estimate: AVERAGE valid symbolic solution or fallback to empirical
+pe_num = np.mean(valid_symbolic_solutions) if valid_symbolic_solutions else pe_empirical
+
+
+# Ensure pe_num is within (0,1), otherwise warn the user
+if not (0 < pe_num < 1):
+    print(f"⚠ WARNING: Selected p_e = {pe_num}, but it is outside (0,1). Check your computations.")
+
+# Print debug information
+print(f"Symbolic solutions: {pe_solutions}")
+print(f"Valid symbolic solutions: {valid_symbolic_solutions}")
+print(f"Empirical solution: {pe_empirical}")
+print(f"Numeric p_e being used: {pe_num}")
+
+# Define total_regions BEFORE computing motif probabilities
+total_regions = len(columns)  # Number of regions after filtering
+
+# Compute motif probabilities (Ensuring n starts from 1, since n=0 isn't meaningful here)
+motif_probs = {
+    n: (pe_num ** n) * ((1 - pe_num) ** (total_regions - n))
+    for n in range(1, total_regions + 1)  # Start at 1
+}
+
+# Normalize probabilities to ensure they sum to exactly 1
+total_motif_prob = sum(motif_probs.values())
+
+if total_motif_prob > 0:
+    motif_probs = {k: v / total_motif_prob for k, v in motif_probs.items()}
+
+# Debugging print statements
+print(f"Before Normalization: {total_motif_prob}")
+print(f"After Normalization: {sum(motif_probs.values())}")
+
+# Final check: Ensure sum is 1
+if not np.isclose(float(sum(motif_probs.values())), 1, atol=0.01):
+    print(f"🚨 WARNING: Motif probabilities sum to {sum(motif_probs.values())}, not 1.")
+
+
 
 # Numerical Calculations using dynamic sample_labels
 # Dynamically match labels for important areas
@@ -251,40 +406,118 @@ special_area_1_label = next((label for label in columns if re.match(f"{args.spec
 special_area_2_label = next((label for label in columns if re.match(f"{args.special_area_2}\\d*", label)), None)
 
 
-if special_area_1_label and special_area_2_label:
-    print(f"Matched labels: {special_area_1_label}, {special_area_2_label}")
-    # Replace hardcoded logic with dynamic labels
-    scaled_value = psdict[special_area_1_label] * psdict[special_area_2_label]
-    print(f"Scaled Value: {scaled_value}")
-else:
-    raise KeyError(f"Required labels matching '{args.special_area_1}' or '{args.special_area_2}' are not found in sample_labels.")
+#if special_area_1_label and special_area_2_label:
+#    print(f"Matched labels: {special_area_1_label}, #{special_area_2_label}")
+#    # Replace hardcoded logic with dynamic labels
+#    scaled_value = psdict[special_area_1_label] * #psdict[special_area_2_label] #original logic 
+#    print(f"Scaled Value: {scaled_value}")
+#else:
+#    raise KeyError(f"Required labels matching '{args.special_area_1}' #or '{args.special_area_2}' are not found in sample_labels.")
+
+# Use log transformation for numerical stability
+log_scaled_value = sum(np.log(psdict[label]) for label in columns)
+scaled_value = np.exp(log_scaled_value)  # Convert back from log scale
+
 
 # Dynamic calculation using sample_labels and total_projections
-calculated_value = (1 - (1 - pe_num)**len(sample_labels)) * total_projections
+calculated_value = (1 - (1 - pe_num)**len(columns)) * total_projections
 print(f"Calculated Value: {calculated_value}")
 
 # Save LaTeX representation of calculated value
 save_latex_expression(calculated_value, "Calculated Value Visualization", os.path.join(out_dir, f"{save_name}_Calculated_Value.png"))
 
 # Perform statistical tests
+if not (0 <= scaled_value <= 1):
+    raise ValueError("Scaled value must be in range [0,1] for valid probability interpretation.")
+
 std_dev = np.sqrt(scaled_value * total_projections * (1 - scaled_value))
+
 print("Standard Deviation:", std_dev)
 
-binomial_p_value = binomial_test(94, total_projections, scaled_value)
-print("Binomial Test Result (P-Value):", binomial_p_value)
+# Identify observed motif sizes and counts
+observed_motif_sizes = np.unique(np.sum(normalized_matrix > 0, axis=1))  # Unique motif sizes
+motif_counts = [np.sum(np.sum(normalized_matrix > 0, axis=1) == size) for size in observed_motif_sizes]
 
-# Save results
+# Debugging printout: Show motif counts (Observed vs Expected)
+print("\n==== DEBUG: Motif Observed vs Expected Counts ====")
+for i, motif_size in enumerate(observed_motif_sizes):
+    observed = motif_counts[i]  # Observed count
+    expected = int(motif_probs.get(motif_size, 0) * observed_cells)  # Expected count based on probabilities
+
+    print(f"Motif Size: {motif_size:5} | Observed: {observed:5} | Expected: {expected:5}")
+
+print("\n===================================================")
+
+# Compute probabilities for observed motif sizes only
+motif_probs = {
+    n: (pe_num ** n) * ((1 - pe_num) ** (total_regions - n)) for n in observed_motif_sizes
+}
+
+# Normalize probabilities
+total_motif_prob = sum(motif_probs.values())
+motif_probs = {k: v / total_motif_prob for k, v in motif_probs.items()}
+
+# Perform binomial test for each observed motif size
+binomial_test_results = []
+for n_proj in observed_motif_sizes:
+    obs_count = int(motif_counts[observed_motif_sizes.tolist().index(n_proj)])  # Ensure integer
+    prob = float(motif_probs.get(n_proj, 0))  # Ensure float
+    p_value = binom.sf(obs_count - 1, int(observed_cells), prob)  # Use proper types
+    binomial_test_results.append((n_proj, prob, p_value))  # Append tuple with 3 elements
+
+# Debugging
+print("DEBUG: Checking structure of binomial_test_results")
+for entry in binomial_test_results:
+    print(f"Entry: {entry}, Type: {type(entry)}, Length: {len(entry)}")
+
+# Flatten results into a CSV-friendly structure
+flat_results = [
+    {"Motif Size": n_proj, "Expected Probability": prob, "P-Value": p_value}
+    for n_proj, prob, p_value in binomial_test_results
+]
+
+# Save to CSV (KEEP THIS)
+binomial_results_file = os.path.join(out_dir, f"{save_name}_Motif_Binomial_Results.csv")
+pd.DataFrame(flat_results).to_csv(binomial_results_file, index=False)
+print(f"Motif binomial test results saved to: {binomial_results_file}")
+
+# REMOVE THIS - DUPLICATE SAVE (CSV WRITER)
+# motif_results_file = os.path.join(out_dir, f"{save_name}_Motif_Binomial_Results.csv")
+# with open(motif_results_file, mode="w", newline="") as file:
+#     writer = csv.writer(file)
+#     writer.writerow(["Motif Projection Count", "Motif Probability", "Binomial Test P-Value"])
+#     writer.writerows(binomial_test_results)
+# print(f"Motif binomial test results saved to: {motif_results_file}")
+
+# Output results
+for n_proj, prob, p_value in binomial_test_results:
+    print(f"Motif Size {n_proj}: Observed = {motif_counts[observed_motif_sizes.tolist().index(n_proj)]}, "
+          f"Expected Probability = {prob:.5f}, P-Value = {p_value:.50f}")
+
+print("\nBinomial Test Results for All Detected Motif Sizes:")
+for n_proj, prob, p_value in binomial_test_results:
+    print(f"  Motif with {n_proj} projections: P-Value = {p_value:.50f}")  # Increase decimal precision
+    print(f"Motif Size {n_proj}: Expected Probability = {motif_probs[n_proj]:.50f}")
+    print(f"Motif Size {n_proj}: Observed Count = {motif_counts[observed_motif_sizes.tolist().index(n_proj)]}")
+
+# Save other results
 results = {
     "Roots": roots,
     "Simplified Pi": [simplified_pi],
     "Region-specific Probabilities": list(psdict.values()),
     "Calculated Value": [calculated_value],
     "Standard Deviation": [std_dev],
-    "Binomial Test Result (P-Value)": [binomial_p_value]
+    "Binomial Test Results": [binomial_test_results]  # Save correctly formatted results
 }
+
+# Save each result to a separate CSV file
 os.makedirs(out_dir, exist_ok=True)
 for key, value in results.items():
-    pd.DataFrame({key: value}).to_csv(os.path.join(out_dir, f"{save_name}_{key.replace(' ', '_')}.csv"), index=False)
+    if key == "Binomial Test Results":
+        pd.DataFrame(flat_results).to_csv(os.path.join(out_dir, f"{save_name}_{key.replace(' ', '_')}.csv"), index=False)
+    else:
+        pd.DataFrame({key: value}).to_csv(os.path.join(out_dir, f"{save_name}_{key.replace(' ', '_')}.csv"), index=False)
+
 
 ### Visualizations
 # Region-specific probabilities
