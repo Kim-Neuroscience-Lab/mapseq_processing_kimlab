@@ -22,7 +22,7 @@ Run --help to see arguments.
 
 **-f** = Enable outlier filtering using mean + 2*std deviation. Removes barcodes where a value in the row is >= to the mean+2*stddev.
 
-**alpha** will default but you can set it if you like, see the script for comments.
+**alpha** Signifigance threshold (default 0.05) for Bonferroni correction, False Discovery Rate correction, and the Binomial Test.
 
 **target_umi_min** = filter for low counts in the matrix eg some_row_[0,1,0,35,12,1,0,120,1,0] will be filtered with the default value of 2 to some_row_[0,0,35,12,0,0,120,0,0].
 
