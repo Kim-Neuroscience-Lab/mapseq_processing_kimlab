@@ -1,4 +1,4 @@
-# mapseq_processing_jacobs
+# MAPseq Analysis Script
 MAPseq processing code based on previous works and designed to be used with the CSHL python pipeline.
 
 Code found here is generally a work in progress until publication.
