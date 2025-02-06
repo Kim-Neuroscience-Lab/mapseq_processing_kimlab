@@ -1,14 +1,62 @@
 # mapseq_processing_jacobs
 MAPseq processing code based on previous works and designed to be used with the CSHL python pipeline.
 
-Any code found here is a work in progress with no guarantee that it will do what it claims until otherwise stated.
+Code found here is generally a work in progress until publication.
 
-**Before you run:**
- Setup a conda environment and the listed dependencies. All should be available in bioconda, conda-forge, and the default.
+## **Before you run:**
+- All dependencies are known to work on debian based linux distributions. Mac is likely to work as well. Windows is currently untested, but if all the dependencies have windows versions things should work.
+- Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
+- This script **process-nbcm-tsv.py** uses the spike in normalized tsv produced by that pipeline (sample.nbcm.tsv). If you want to run a full analysis, you will need to ensure that the fastq processing has included: your samples, your negative control, and your injection columns in the output. Partial analysis is also possible at your discretion; there is a provided truncated sample dataset and associated labels which you can check out for guidance.
+- Setup a new conda environment, repos, and dependencies as shown below.
+- Run analysis.
+<br/>
 
-Run --help to see arguments.
+## Installation
 
-**REQUIRED Arguments**
+1. Install mini-conda for your operating system. [mini-conda quick command line install](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)
+
+2.  With conda installed create a new environment preloaded with pip
+
+ ```
+conda create -n mapseq_processing python==3.9 pip
+```
+
+3. Activate your new environment
+
+```
+conda activate mapseq_processing
+```
+
+4. Install additional repositories
+
+```
+conda config --add channels conda-forge
+conda config --add channels bioconda
+```
+
+5. Browse to your git directory and clone this project
+
+```
+cd /home/your_user/git/
+git clone https://github.com/matsojr22/mapseq_processing_jacobs.git
+```
+
+6. Browse into the project directory and install dependencies
+
+```
+cd /mapseq_processing_jacobs/
+pip install -r requirements.txt
+```
+
+7. Run the script on your sample.nbcm.tsv (command below shown using included sample dataset)
+
+```
+python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+```
+
+<br/>
+
+## **REQUIRED Arguments**
 
 **-o** = path to your output directory
 
@@ -16,36 +64,49 @@ Run --help to see arguments.
 
 **-s** = prefix for your saved files
 
-**-l** = list of your columns in the tsv (Example:"area,area,area,neg,area,inj") You must use 'neg' for any columns containing negative controls and 'inj' for any injection site column. You can use whatever names you want for samples but avoid spaces and characters. The code will try to sort samples if you have repeat values (visp1,visp2,visp3,audp1,audp2...). I do not know if you can use more than one neg and and inj in a matrix. My data does not look like that.
+**-l** = A list of your human readable column names in the tsv (Example:"area,area,area,neg,area,inj") 
+- Your list must use 'neg' for any columns containing negative controls and 'inj' for any injection site column.
+- Your list can use whatever names you want for the target areas but avoid spaces and characters.
+- The code will try to sort target areas if you have repeat values (visp1,visp2,visp3,audp1,audp2...).
+- I do not know if you can use more than one neg and and inj in a matrix. My data does not look like that and I havent tested.
 
-**OPTIONAL Arguments**
+<br/>
+<br/>
 
-**-u** = Sets a threshold filter for target area UMI counts where smaller values will be set to zero. Typically for noise reduction of single UMI values in targets which we assume are noise. (default: 2) 
+## **OPTIONAL Arguments**
 
-**-f** = Enable outlier filtering using mean + 2*std deviation. Removes barcodes where a value in the row is >= to the mean+2*stddev.
+**-u** = Changes the threshold filter for target area UMI counts where very small values will be set to zero. (default: 2) 
 
-**alpha** Signifigance threshold (default 0.05) for Bonferroni correction, False Discovery Rate correction, and the Binomial Test.
+```
+For example the default setting is 2 meaning that for every rown in your matrix the following logic will be applied
 
-**target_umi_min** = filter for low counts in the matrix eg some_row_[0,1,0,35,12,1,0,120,1,0] will be filtered with the default value of 2 to some_row_[0,0,35,12,0,0,120,0,0].
+some_row_[0,1,0,35,12,1,0,120,1,0]
 
-If you get the upsetplots out in your analysis folder then you got all the way through.
+will be filtered with the default value of 2 to
 
-**BUGS**
+some_row_[0,0,0,35,12,0,0,120,0,0].
+
+Used for potential noise reduction of single UMI values in targets, but you can change this if you would like.
+```
+
+**-f** = Enable outlier filtering of barcodes. Where any target value in a row is greater than the mean of all target values in the dataset plus two standard deviations, drop that barcode. We include this argument for microdissections which neighbor the injection site and there is no good way to know if very large UMI counts are from some kind of contamination.
+
+**-a** = Value for alpha. This is the signifigance threshold (default 0.05) for Bonferroni correction, False Discovery Rate correction, and the Binomial Test.
+
+<br/>
+
+## **BUGS**
 There are a few bugs presently. 
 
-1.The plots are not all in a format that I love.
+1. The plots may experience formatting issues
 
-2. order_partial is not dynamically defined and is not currently implemented correctly.
+2. The variables order_full and order_partial are not dynamically defined and their use is not currently implemented correctly. You may see these strings in the cli output, but they can be ignored.
 
-**Example command for running the sample data**
+<br/>
 
-```
-python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
-```
+## **Old Arguments not yet removed**
 
-**Old Arguments not yet removed**
+**-A** = Label from your labels to match for the first "important area" (e.g., 'AL') Must match something in your labels! (updated to dynamically calculate using all labeled areas)
 
-**-A** = Label from your labels to match for the first important area (e.g., 'AL') Must match something in your labels! (updated to dynamically calculate using all labeled areas)
-
-**-B** = Label from your labels to match for the second important area (e.g., 'PM') Must match something in your labels! (updated to dynamically calculate using all labeled areas)
+**-B** = Label from your labels to match for the second "important area" (e.g., 'PM') Must match something in your labels! (updated to dynamically calculate using all labeled areas)
 
