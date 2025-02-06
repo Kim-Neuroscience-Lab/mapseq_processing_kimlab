@@ -35,6 +35,10 @@ There are a few bugs presently.
 
 2. order_partial is not dynamically defined and is not currently implemented correctly.
 
+**Example command for running the sample data**
+
+python process-nbcm-tsv.py -f -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+
 **Old Arguments not yet removed**
 
 **-A** = Label from your labels to match for the first important area (e.g., 'AL') Must match something in your labels! (updated to dynamically calculate using all labeled areas)
