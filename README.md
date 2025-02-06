@@ -10,15 +10,17 @@ Run --help to see arguments.
 
 **REQUIRED Arguments**
 
-**-0** = path to your output directory
+**-o** = path to your output directory
 
-**-d** = path to your nbcm.tsv
+**-d** = path to your sample.nbcm.tsv which was produced by the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing)
 
 **-s** = prefix for your saved files
 
 **-l** = list of your columns in the tsv (Example:"area,area,area,neg,area,inj") You must use 'neg' for any columns containing negative controls and 'inj' for any injection site column. You can use whatever names you want for samples but avoid spaces and characters. The code will try to sort samples if you have repeat values (visp1,visp2,visp3,audp1,audp2...). I do not know if you can use more than one neg and and inj in a matrix. My data does not look like that.
 
 **OPTIONAL Arguments**
+
+**-u** = Sets a threshold filter for target area UMI counts where smaller values will be set to zero. Typically for noise reduction of single UMI values in targets which we assume are noise. (default: 2) 
 
 **-f** = Enable outlier filtering using mean + 2*std deviation. Removes barcodes where a value in the row is >= to the mean+2*stddev.
 
@@ -37,7 +39,9 @@ There are a few bugs presently.
 
 **Example command for running the sample data**
 
-python process-nbcm-tsv.py -f -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+```
+python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+```
 
 **Old Arguments not yet removed**
 
