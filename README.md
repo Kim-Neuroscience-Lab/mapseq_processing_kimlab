@@ -75,7 +75,7 @@ python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375
 
 ## **OPTIONAL Arguments**
 
-**-u** = Changes the threshold filter for target area UMI counts where very small values will be set to zero. (default: 2) 
+**-u** = Changes the threshold filter for target area UMI counts where very small values (noise) will be set to zero. (default: 2) You may want to set this to the maximum value seen in your negative control.
 
 ```
 For example the default setting is 2 meaning that for every rown in your matrix the following logic will be applied
@@ -88,6 +88,8 @@ some_row_[0,0,0,35,12,0,0,120,0,0].
 
 Used for potential noise reduction of single UMI values in targets, but you can change this if you would like.
 ```
+
+**-i** = Sets a threshold value for filtering barcodes by minimim injection site UMI.
 
 **-f** = Enable outlier filtering of barcodes. Where any target value in a row is greater than the mean of all target values in the dataset plus two standard deviations, drop that barcode. We include this argument for microdissections which neighbor the injection site and there is no good way to know if very large UMI counts are from some kind of contamination.
 
