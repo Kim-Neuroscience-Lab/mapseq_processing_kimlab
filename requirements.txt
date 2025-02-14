@@ -8,6 +8,5 @@ pandas
 matplotlib
 seaborn
 scipy
-itertools
 upsetplot
 statsmodels
