@@ -10,3 +10,4 @@ seaborn
 scipy
 upsetplot
 statsmodels
+networkx
