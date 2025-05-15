@@ -222,7 +222,7 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, a
     print(f"🔍 Step 5: Removed rows with 'neg' > 0. Shape: {matrix.shape}")
     
     # 🚨 Step 6: Apply UMI threshold
-    final_umi_threshold = target_umi_min #if target_umi_min != 2 else max_neg_value
+    final_umi_threshold = max(target_umi_min, max_neg_value) #picks the bigger value. Either the user defined target_umi_min or the highest value in the neg column from step 4.
     matrix[matrix < final_umi_threshold] = 0
     num_zero_after_threshold = np.sum(np.sum(matrix > 0, axis=1) == 0)
     print(f"✅ CHECK THIS Step 6: Applied threshold ({target_umi_min}). New zero rows: {num_zero_after_threshold}")
