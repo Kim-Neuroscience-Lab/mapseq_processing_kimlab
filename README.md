@@ -48,10 +48,24 @@ cd /mapseq_processing_jacobs/
 pip install -r requirements.txt
 ```
 
-7. Run the script on your sample.nbcm.tsv (command below shown using included sample dataset)
+7. Run the script on your preprocess_and_aggregate.tsv on a per-group basis where the input directory contains the nbcm.tsv files from the CSHL pipeline. (new steps not yet reflected in sample datasets)
+
+```
+python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacobs/predata/adults/ -o /home/mwjacobs/git/mapseq_processing_jacobs/data/adults/
+```
+
+8. Run the main analysis script on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from the prior step)
 
 ```
 python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+```
+
+9. Run any additional analysis scripts on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from step 7.) These are typically analysis that are under development and not integrated into the main workflow.
+
+```
+python cluster_fig.py (see arguments for input, output, k-clusters, sort_labels, output_name)
+python arrow_diagrams.py (see arguments for input, output, output_prefix)
+
 ```
 
 <br/>
@@ -60,7 +74,7 @@ python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375
 
 **-o** = path to your output directory
 
-**-d** = path to your sample.nbcm.tsv which was produced by the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing)
+**-d** = path to your sample.nbcm.tsv which was produced by the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing) Or your group.aggregate.tsv file.
 
 **-s** = prefix for your saved files
 
@@ -69,13 +83,14 @@ python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375
 - Your list can use whatever names you want for the target areas but avoid spaces and characters.
 - The code will try to sort target areas if you have repeat values (visp1,visp2,visp3,audp1,audp2...).
 - I do not know if you can use more than one neg and and inj in a matrix. My data does not look like that and I havent tested.
+- Use the exact format shown, no spaces between your list or the code will error.
 
 <br/>
 <br/>
 
 ## **OPTIONAL Arguments**
 
-**-u** = Changes the threshold filter for target area UMI counts where very small values (noise) will be set to zero. (default: 2) You may want to set this to the maximum value seen in your negative control.
+**-u** = Changes the threshold filter for target area UMI counts where very small values (noise) will be set to zero. (default: 2) You may want to set this to the maximum value seen in your negative control as was done in Han et. al. 2018..
 
 ```
 For example the default setting is 2 meaning that for every rown in your matrix the following logic will be applied
@@ -89,9 +104,9 @@ some_row_[0,0,0,35,12,0,0,120,0,0].
 Used for potential noise reduction of single UMI values in targets, but you can change this if you would like.
 ```
 
-**-i** = Sets a threshold value for filtering barcodes by minimim injection site UMI.
+**-i** = Sets a threshold value for filtering barcodes by minimim injection site UMI. (default: 1) Han et. al. sets this to 300, Klingler et. al. 2018 sets this to 100, you may set it to your desired value.
 
-**-f** = Enable outlier filtering of barcodes. Where any target value in a row is greater than the mean of all target values in the dataset plus two standard deviations, drop that barcode. We include this argument for microdissections which neighbor the injection site and there is no good way to know if very large UMI counts are from some kind of contamination.
+**-f** = Enable outlier filtering of barcodes. Where any target value in a row is greater than the mean of all target values in the dataset plus two standard deviations, drop that barcode. We include this argument for microdissections which neighbor the injection site and there is no good way to know if very large UMI counts are from some kind of contamination. Use this at your own discretion.
 
 **-a** = Value for alpha. This is the signifigance threshold (default 0.05) for Bonferroni correction, False Discovery Rate correction, and the Binomial Test.
 
