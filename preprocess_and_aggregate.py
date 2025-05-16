@@ -60,8 +60,18 @@ def preprocess_file(filepath, outdir, fallback_threshold=2):
 
     print(f"📊 Applying threshold to columns: {non_vbc}")
 
+    # Count nonzero values before thresholding
+    pre_thresh_nonzero = (df[non_vbc] > 0).sum().sum()
+
     # Apply threshold: keep values >= threshold, else zero
     df[non_vbc] = df[non_vbc].applymap(lambda x: x if pd.notnull(x) and x >= threshold else 0)
+
+    # Count nonzero values after thresholding
+    post_thresh_nonzero = (df[non_vbc] > 0).sum().sum()
+    num_zeroed = pre_thresh_nonzero - post_thresh_nonzero
+
+    print(f"🧹 Thresholding complete: {int(num_zeroed)} values set to zero.")
+
 
     # Remove all-zero rows (excluding 'vbc_read_col')
     df = df.loc[(df[non_vbc] > 0).any(axis=1)]
@@ -112,6 +122,14 @@ def main(input_dir, output_dir, fallback_threshold):
         print(f"\n✅ Aggregated matrix saved to:\n📂 {aggregate_path}")
     else:
         print("⚠ No cleaned datasets found to aggregate.")
+        return
+
+    # 🧾 Post-run summary
+    total_files = len(cleaned_dfs)
+    total_zeroed = sum(((df == 0).sum().sum() for df in aligned_dfs))
+    print(f"\n🧾 Summary: Processed {total_files} file(s), output written to:")
+    print(f"📄 {aggregate_path}")
+    print(f"🧹 Total zeroed matrix entries across all files: {total_zeroed}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess and align replicate TSVs for aggregation.")
@@ -121,4 +139,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.input_dir, args.output_dir, args.fallback_threshold)
-
