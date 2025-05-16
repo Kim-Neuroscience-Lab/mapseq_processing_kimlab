@@ -6,9 +6,10 @@ Code found here is generally a work in progress until publication.
 ## **Before you run:**
 - All dependencies are known to work on debian based linux distributions. Mac is likely to work as well. Windows is currently untested, but if all the dependencies have windows versions things should work.
 - Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
-- This script **process-nbcm-tsv.py** uses the spike in normalized tsv produced by that pipeline (sample.nbcm.tsv). If you want to run a full analysis, you will need to ensure that the fastq processing has included: your samples, your negative control, and your injection columns in the output. Partial analysis is also possible at your discretion; there is a provided truncated sample dataset and associated labels which you can check out for guidance.
+- A preprocessing and data aggregation script is provided to prepare a combined cohort level dataframe for analysis using the per-animal sample.nbcm.tsv files produced by the CSHL pipeline.
+- This script **process-nbcm-tsv.py** uses the aggregated_cleaned_matrix.tsv produced by the preprocessing and aggregation script (or individual sample.nbcm.tsv files from the CSHL pipeline if you do not have replicates). If you want to run a full analysis, you will need to ensure that the fastq processing parameters in the CSHL script have included: your samples, your negative control, and your injection columns in the output. Partial analysis is also possible at your discretion; there is a provided truncated "sample dataset" and associated "labels" which you can check out for guidance. You will need to check the arguments for each script if these requirements are unclear.
 - Setup a new conda environment, repos, and dependencies as shown below.
-- Run analysis.
+- Run preprocessing then main analysis scripts. Some subsequent analysis scripts are provided, but are in development.
 <br/>
 
 ## Installation
