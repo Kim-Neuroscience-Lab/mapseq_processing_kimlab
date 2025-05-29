@@ -30,7 +30,7 @@ from statsmodels.stats.multitest import fdrcorrection
 # Argument parser setup
 parser = argparse.ArgumentParser(description="Process NBCM data")
 parser.add_argument("-o","--out_dir", type=str, required=True, help="Output directory for saving results")
-parser.add_argument("-s","--save_name", type=str, required=True, help="Prefix for naming saved files")
+parser.add_argument("-s", "--sample_name", type=str, required=True, help="Sample name")
 parser.add_argument("-d","--data_file", type=str, required=True, help="Path to the input nbcm.csv file")
 parser.add_argument("-a","--alpha", type=float, default=0.05, help="Significance threshold for Bonferroni correction (default: 0.05)")
 parser.add_argument(
@@ -38,6 +38,14 @@ parser.add_argument(
     type=float, 
     default=1, 
     help="Sets a threshold for minimum 'inj' UMI values. Rows where 'inj' is below this value will be removed. Default: 1."
+)
+parser.add_argument(
+    "-t","--min_target_count", type=float, default=10,
+    help="Minimum UMI count required in at least one target area. Rows not meeting this are excluded."
+)
+parser.add_argument(
+    "-r","--min_body_to_target_ratio", type=float, default=10,
+    help="Minimum fold-difference between 'inj' value and the highest target count. Rows not meeting this are excluded."
 )
 parser.add_argument("-u","--target_umi_min", type=float, default=2, help="Sets a threshold filter for target area UMI counts where smaller values will be set to zero. Typically for noise reduction of single UMI values in targets. (default: 2)")
 parser.add_argument(
@@ -61,13 +69,17 @@ args = parser.parse_args()
 
 # Define variables dynamically from arguments
 out_dir = args.out_dir
-save_name = args.save_name
+sample_name = args.sample_name
 data_file = args.data_file
 alpha = args.alpha
+min_target_count = args.min_target_count
+min_body_to_target_ratio = args.min_body_to_target_ratio
 target_umi_min = args.target_umi_min
 sample_labels = args.labels.split(",") if args.labels else None
 special_area_1 = args.special_area_1
 special_area_2 = args.special_area_2
+
+
 
 # Ensure output directory exists
 os.makedirs(out_dir, exist_ok=True)
@@ -167,6 +179,15 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, a
     matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
     print(f"🔍 Step 2: Removed zero-projection rows. Shape: {matrix.shape}")
 
+    # 🚨 Step 2b: Remove rows where all target regions are < min_target_count
+    non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
+    if non_neg_inj_cols:
+        target_max = np.max(matrix[:, non_neg_inj_cols], axis=1)
+        matrix = matrix[target_max >= min_target_count]
+        print(f"🔍 Step 2b: Removed rows with all targets < {min_target_count}. Shape: {matrix.shape}")
+    else:
+        print("⚠ WARNING: No valid target columns found (excluding 'inj' and 'neg'). Skipping Step 2b.")
+
     # 🚨 Step 3: Remove rows where any value >= the corresponding 'inj' column value
     if "inj" in sample_labels:
         inj_col_idx = sample_labels.index("inj")
@@ -196,6 +217,24 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, a
     else:
         print("⚠ WARNING: 'inj' column not found. Skipping Step 3b.")
     
+    # 🚨 Step 3c: Remove rows where inj < (max target value * ratio threshold)
+    if "inj" in sample_labels:
+        inj_col_idx = sample_labels.index("inj")
+        non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
+        inj_values = matrix[:, inj_col_idx]
+        if non_neg_inj_cols:
+            max_target_values = np.max(matrix[:, non_neg_inj_cols], axis=1)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                valid_mask = inj_values >= (max_target_values * min_body_to_target_ratio)
+                valid_mask = np.nan_to_num(valid_mask, nan=False)
+            matrix = matrix[valid_mask.astype(bool)]
+            print(f"🔍 Step 3c: Removed rows where 'inj' < max(targets) * {min_body_to_target_ratio}. Shape: {matrix.shape}")
+        else:
+            print("⚠ WARNING: No valid target columns found (excluding 'inj' and 'neg'). Skipping Step 3c.")
+    else:
+        print("⚠ WARNING: 'inj' column not found. Skipping Step 3c.")
+
+	
     # 🚨 Step 4: Extract max value from 'neg' column **before removing rows with neg > 0**
     neg_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower()]
     
@@ -326,7 +365,7 @@ assert normalized_matrix.shape[1] == len(columns), (
 )
 
 # Save the normalized matrix to CSV for future analysis in the script
-normalized_matrix_file = os.path.join(out_dir, f"{save_name}_Normalized_Matrix.csv")
+normalized_matrix_file = os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv")
 pd.DataFrame(normalized_matrix, columns=columns).to_csv(normalized_matrix_file, index=False, float_format="%.8f")
 print(f"💾 Normalized matrix saved to: 📂 {normalized_matrix_file}")
 
@@ -355,7 +394,7 @@ simplified_pi = sympy.simplify(pi)
 print("Simplified Pi:", simplified_pi)
 
 # Save LaTeX representation of simplified Pi
-save_latex_expression(simplified_pi, "Simplified Pi Visualization", os.path.join(out_dir, f"{save_name}_Simplified_Pi.png"))
+save_latex_expression(simplified_pi, "Simplified Pi Visualization", os.path.join(out_dir, f"{sample_name}_Simplified_Pi.png"))
 
 # Calculate probabilities
 psdict = calculate_probabilities(projections, total_projections)
@@ -415,21 +454,20 @@ if not np.isclose(float(sum(motif_probs.values())), 1, atol=0.01):
 
 
 
-# Numerical Calculations using dynamic sample_labels
-# Dynamically match labels for important areas
-special_area_1_label = next((label for label in columns if re.match(f"{args.special_area_1}\\d*", label)), None)
-special_area_2_label = next((label for label in columns if re.match(f"{args.special_area_2}\\d*", label)), None)
-
-
-#if special_area_1_label and special_area_2_label:
-#    print(f"Matched labels: {special_area_1_label}, #{special_area_2_label}")
-#    # Replace hardcoded logic with dynamic labels
-#    scaled_value = psdict[special_area_1_label] * #psdict[special_area_2_label] #original logic 
-#    print(f"Scaled Value: {scaled_value}")
-#else:
-#    raise KeyError(f"Required labels matching '{args.special_area_1}' #or '{args.special_area_2}' are not found in sample_labels.")
-
-# Use log transformation for numerical stability
+    normalized_path = os.path.join(output_dir, f"{sample_name}_Normalized_Matrix.csv")
+    # Dynamically match labels for important areas
+    special_area_1_label = next((label for label in columns if re.match(f"{args.special_area_1}\\d*", label)), None)
+    special_area_2_label = next((label for label in columns if re.match(f"{args.special_area_2}\\d*", label)), None)
+    column_counts_path = os.path.join(output_dir, f"{sample_name}_Column_Counts.csv")
+        #if special_area_1_label and special_area_2_label:
+    #    print(f"Matched labels: {special_area_1_label}, #{special_area_2_label}")
+    #    # Replace hardcoded logic with dynamic labels
+    root_save_path = os.path.join(output_dir, f"{sample_name}_Roots.csv")
+    pi_save_path = os.path.join(output_dir, f"{sample_name}_Simplified_Pi.csv")
+    region_probs_path = os.path.join(output_dir, f"{sample_name}_Region-specific_Probabilities.csv")
+    calculated_path = os.path.join(output_dir, f"{sample_name}_Calculated_Value.csv")
+    std_dev_path = os.path.join(output_dir, f"{sample_name}_Standard_Deviation.csv")
+    motif_test_path = os.path.join(output_dir, f"{sample_name}_Motif_Binomial_Results.csv")
 log_scaled_value = sum(np.log(psdict[label]) for label in columns)
 scaled_value = np.exp(log_scaled_value)  # Convert back from log scale
 
@@ -439,7 +477,7 @@ calculated_value = (1 - (1 - pe_num)**len(columns)) * observed_cells #total_proj
 print(f"🔍 Expected Observed Projections [(1-(1-p_e)*#areas)*observed cells]: {calculated_value}")
 
 # Save LaTeX representation of calculated value
-save_latex_expression(calculated_value, "Calculated Value Visualization", os.path.join(out_dir, f"{save_name}_Calculated_Value.png"))
+save_latex_expression(calculated_value, "Calculated Value Visualization", os.path.join(out_dir, f"{sample_name}_Calculated_Value.png"))
 
 # Perform statistical tests
 if not (0 <= scaled_value <= 1):
@@ -492,7 +530,7 @@ flat_results = [
 ]
 
 # Save to CSV 
-binomial_results_file = os.path.join(out_dir, f"{save_name}_Motif_Binomial_Results.csv")
+binomial_results_file = os.path.join(out_dir, f"{sample_name}_Motif_Binomial_Results.csv")
 pd.DataFrame(flat_results).to_csv(binomial_results_file, index=False)
 print(f"Motif binomial test results saved to: {binomial_results_file}")
 
@@ -524,7 +562,7 @@ print("\n💾 Saving computed results to CSV files...\n")
 
 # Save each result to a separate CSV file
 for key, value in results.items():
-    file_path = os.path.join(out_dir, f"{save_name}_{key.replace(' ', '_')}.csv")
+    file_path = os.path.join(out_dir, f"{sample_name}_{key.replace(' ', '_')}.csv")
 
     if key == "Binomial Test Results":
         print(f"📂 Saving {key} to {file_path} (formatted as a DataFrame)")
@@ -545,7 +583,7 @@ plt.ylabel("Probability")
 plt.xlabel("Region")
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(os.path.join(out_dir, f"{save_name}_Region_Probabilities.png"))
+plt.savefig(os.path.join(out_dir, f"{sample_name}_Region_Probabilities.png"))
 plt.close()
 
 # Roots scatterplot
@@ -556,19 +594,20 @@ plt.ylabel("Root Value")
 plt.xlabel("Index")
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(os.path.join(out_dir, f"{save_name}_Roots.png"))
+plt.savefig(os.path.join(out_dir, f"{sample_name}_Roots.png"))
 plt.close()
 
 ### Analysis and Plotting Integration
 
 #Where is the normalized_matrix.csv
 data_dir = out_dir
-file_name = os.path.join(f"{save_name}_Normalized_Matrix.csv")
+file_name = os.path.join(f"{sample_name}_Normalized_Matrix.csv")
 
 
 # Load normalized matrix as input for analysis
-normalized_matrix_file = os.path.join(out_dir, f"{save_name}_Normalized_Matrix.csv")
+normalized_matrix_file = os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv")
 normalized_matrix = pd.read_csv(normalized_matrix_file)
+
 
 # Ensure 'analysis' subdirectory exists within 'out_dir'
 analysis_dir = os.path.join(out_dir, 'analysis')
@@ -589,7 +628,7 @@ def load_df(file, remove_cols=None, subset=None):
     remove_col specifies the names of columns to remove (list, e.g. ["DLS"])
     subset specifies the names of columns to keep (drop others, e.g. 'LH', 'BLA', 'PFC', 'NAc'])
     """
-    experiment_ = pd.read_csv(file,header=0) #pd.read_excel(file,header=0)
+    experiment_ = pd.read_csv(file_path) #pd.read_excel(file,header=0)
     print(experiment_.columns)
     df = experiment_
     #df.columns = colnames
@@ -611,10 +650,10 @@ Change the file path:
 file_path = data_dir + file_name
 if full_data:
     #Load full data set
-    df = load_df(file_path, remove_cols=None,subset=None)
+    df = load_df(os.path.join(args.out_dir, f"{args.sample_name}_Normalized_Matrix.csv"), remove_cols=None, subset=None)
 else:
     #Load special regions:
-    df = load_df(file_path, remove_cols=['RSP'], subset=['PM','AM','A','RL','AL','LM'])
+    df = load_df(os.path.join(output_dir, f"{sample_name}_Normalized_Matrix.csv"), remove_cols=['RSP'], subset=['PM','AM','A','RL','AL','LM'])
 
 print("df shape: {}".format(df.shape))
 print("DF Head:")
@@ -640,12 +679,12 @@ plt.ylabel('Inertia',fontsize=20)
 plt.title('Elbow Method For Optimal k',fontsize=20)
 plt.legend()
 
-elbow_plt.savefig(os.path.join(plot_dir, save_name + "elbow_plot.pdf"))
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.pdf"))
 
 km = k_means(df.to_numpy(), n_clusters=6) #THIS WAS INITIALLY 6, I THINK THEY PULL IT FROM OUTPUT in their original jupyter notebook.
 km[0].shape
 
-df.to_csv(os.path.join(plot_dir, save_name + "_motif_obs_exp.csv"))
+df.to_csv(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv"))
 
 scolors = ['black','red','orange','yellow'] #['lightblue','darkblue'] 
 scm = LinearSegmentedColormap.from_list(
@@ -674,7 +713,7 @@ for i in range(km[0].shape[0]):
 
 fig.colorbar(ax_,label='Projection Strength')
 
-fig.savefig(os.path.join(plot_dir, save_name + "_kmeans.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.pdf"))
 
 def concatenate_list_data(slist,join=motif_join):
     result = []
@@ -776,7 +815,7 @@ df_obs_exp = pd.DataFrame(data=[concatenate_list_data(motif_labels),\
                                 dcounts,\
                                 exp_counts.astype(int)]).T
 df_obs_exp.columns = ['Motif','Observed','Expected']
-df_obs_exp.to_csv(os.path.join(plot_dir, save_name + "_motif_obs_exp.csv"))
+df_obs_exp.to_csv(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv"))
 df_obs_exp
 
 ##suggested addition to give another csv without the null combination from the powerset at the top row.
@@ -789,7 +828,7 @@ df_obs_exp = df_obs_exp[df_obs_exp['Motif'] != ""]  # Adjust condition as needed
 
 # Save filtered data to CSV
 df_obs_exp.to_csv(
-    os.path.join(plot_dir, save_name + "_motif_obs_exp_filtered.csv"), 
+    os.path.join(plot_dir, sample_name + "_motif_obs_exp_filtered.csv"), 
     index=False
 )
 
@@ -855,7 +894,7 @@ fig,ax = plt.subplots(1,1)#plt.figure(figsize=(13,11))
 fig.set_size_inches(20,20)
 plt.rc('text', usetex=False)
 plt.rc('font', family='serif')
-ax.set_title(save_name.replace('_',''),fontsize=16)
+ax.set_title(sample_name.replace('_',''),fontsize=16)
 ax.set_xlabel("Effect Size \n$log_2($observed/expected$)$",fontsize=16)
 ax.set_ylabel("Significance\n $-log_{10}(P)$",fontsize=16)
 ax.axhline(y=pcutoff, linestyle='--')
@@ -897,7 +936,7 @@ adjust_text(
     force_points=1  # Increase separation force for points
 )
 
-fig.savefig(os.path.join(plot_dir, save_name + "_effect_significance.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.pdf"))
 
 def gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,expected,savepath=plot_dir, hide_singlets=True,figsize=(16,35)):
     """
@@ -958,7 +997,7 @@ if full_data:
     fig_size2 = (20,140) #(20,140)
 else:
     fig_size2 = (20,10)
-gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.join(plot_dir, save_name + "_per_cell_proj_strength.pdf"))
+gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.join(plot_dir, sample_name + "_per_cell_proj_strength.pdf"))
 #
 #
 
@@ -1025,9 +1064,9 @@ clusterfig = sn.clustermap(
 )
 
 # Add title and save figure
-clusterfig.ax_heatmap.set_title(save_name.replace('_', ' '))
+clusterfig.ax_heatmap.set_title(sample_name.replace('_', ' '))
 clusterfig.ax_heatmap.axes.get_yaxis().set_visible(False)
-clusterfig.savefig(os.path.join(plot_dir, save_name + "_red_white_cluster_heatmap.pdf"))
+clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.pdf"))
 
 
 def gen_prob_matrix(df : pd.DataFrame):
@@ -1055,7 +1094,7 @@ def gen_prob_matrix(df : pd.DataFrame):
 probmat = gen_prob_matrix(df)
 
 fig, ax = plt.subplots(figsize=(10,10))
-ax.set_title(save_name.replace('_',''),fontsize=20)
+ax.set_title(sample_name.replace('_',''),fontsize=20)
 colors2 = ['darkblue','#1f9ed1','#26ffc5','#ffc526','yellow']
 cm2 = LinearSegmentedColormap.from_list(
         'white_to_red', colors2, N=100)
@@ -1063,7 +1102,7 @@ ax.set_facecolor('#a8a8a8')
 ax = sn.heatmap(probmat.T,mask=probmat.T == 1,ax=ax,cbar_kws=dict(label='$P(B | A)$'),cmap=cm2) #can add vmax=number for scale
 ax.set_xlabel("Area A",fontsize=16)
 ax.set_ylabel("Area B",fontsize=16)
-plt.savefig(os.path.join(plot_dir, save_name + "_blueyellow_probability_heatmap.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.pdf"))
 
 def remove_zero_rows(df):
     df_ = df.fillna(0)
@@ -1226,7 +1265,7 @@ def write_motif_counts(path,counts):
             f.write("%s\n" % item)
 
 write_motif_counts(
-    os.path.join(plot_dir, save_name + '_counts.txt'), 
+    os.path.join(plot_dir, sample_name + '_counts.txt'), 
     unstruct_counts
 )
 
@@ -1234,7 +1273,7 @@ mdf = get_all_counts(df,motifs,dcounts,motif_labels)
 
 mdf.head()
 
-mdf.to_csv(os.path.join(plot_dir, save_name + "_motif_counts.csv"))
+mdf.to_csv(os.path.join(plot_dir, sample_name + "_motif_counts.csv"))
 
 show_perc_motifs(False)
 
@@ -1262,18 +1301,18 @@ c = pd.DataFrame(c,columns=['# Cells'], index=c_row_names)
 c_np = c.to_numpy(copy=True).flatten()
 c.head()
 
-c.to_csv(os.path.join(plot_dir, save_name + "_pie_chart_data.csv"))
+c.to_csv(os.path.join(plot_dir, sample_name + "_pie_chart_data.csv"))
 
 c_tot = c_np.sum()
 c_tot
 
 plt.figure(figsize=(10,10))
-plt.title(save_name.replace('_',''))
+plt.title(sample_name.replace('_',''))
 glabels = ["1 target \n {:0.3}\%".format(100*c_np[0] / c_tot)]
 glabels += ["{} targets \n {:0.3}\%".format(i+2,100*j/c_tot) for (i,j) in zip(range(c_np.shape[0]-1),c_np[1:])]
 patches, texts = plt.pie(c.to_numpy().flatten(),labels=glabels)
 [txt.set_fontsize(8) for txt in texts]
-plt.savefig(os.path.join(plot_dir, save_name + "_num_targets_pie.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.pdf"))
 
 maxproj = TSNE(n_components=2,metric='cosine').fit_transform(df.to_numpy(copy=True))
 
@@ -1283,13 +1322,13 @@ tlabels = df.to_numpy(copy=True).argmax(axis=1)
 #tlabels = km[1]
 
 plt.figure(figsize=(12,9))
-plt.title(save_name.replace('_',''),fontsize=20)
+plt.title(sample_name.replace('_',''),fontsize=20)
 plt.xlabel("tSNE Component 1",fontsize=20)
 plt.ylabel("tSNE Component 2",fontsize=20)
 sc = plt.scatter(maxproj[:,0],maxproj[:,1],c=tlabels) #c=maxprojclusters[1]
 cb = plt.colorbar(sc)
 cb.set_label("Maximum Projection Target",fontsize=20)
-plt.savefig(os.path.join(plot_dir, save_name + "_tsne.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.pdf"))
 
 def prepare_upset_data(df):
     #mask1 = [i for (i,x) in enumerate(motif_labels) if len(x) > 1]
@@ -1359,7 +1398,7 @@ dfraw = pd.DataFrame(data=[
 dfraw.columns=['Motifs','Observed','Expected', 'Expected SD','Effect Size', 'P-value', 'Degree', 'Group']
 
 dfraw.to_csv(
-    os.path.join(plot_dir, save_name + "_upsetplot.csv"),
+    os.path.join(plot_dir, sample_name + "_upsetplot.csv"),
     index=False
 )
 
@@ -1426,7 +1465,7 @@ def kplot(df, size=(30,12)):
     return fig, ax
 
 fig, _ = kplot(dfdata)
-fig.savefig(os.path.join(plot_dir, save_name + "_upsetplot_gpt.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.pdf"))
 
 def kplot(df, size=(30,12)):
     """
@@ -1476,6 +1515,6 @@ def kplot(df, size=(30,12)):
 
 fig,_ = kplot(dfdata)
 
-fig.savefig(os.path.join(plot_dir, save_name + "_upsetplot.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.pdf"))
 
 df.astype(bool).sum()
