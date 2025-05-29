@@ -39,13 +39,13 @@ conda config --add channels bioconda
 
 ```
 cd /home/your_user/git/
-git clone https://github.com/matsojr22/mapseq_processing_jacobs.git
+git clone https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git
 ```
 
 6. Browse into the project directory and install dependencies
 
 ```
-cd /mapseq_processing_jacobs/
+cd /mapseq_processing_kimlab/
 pip install -r requirements.txt
 ```
 
