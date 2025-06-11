@@ -23,68 +23,73 @@ def get_column_mapping(original_columns, filename):
         mapping[current_col] = new_col
     return mapping
 
-def identify_neg_column(columns):
+def identify_neg_column(columns, default_neg=None, max_attempts=3):
     print(f"\nStandardized columns: {columns}")
-    while True:
-        neg_col = input("❓ Enter the standardized name of the 'neg' column: ").strip()
+    attempts = 0
+    while attempts < max_attempts:
+        neg_col = input("❓ Enter the standardized name of the 'neg' column (press Enter to skip): ").strip()
+        if not neg_col:
+            if default_neg and default_neg in columns:
+                print(f"✅ Defaulting to 'neg' column: {default_neg}")
+                return default_neg
+            else:
+                print("⚠ No 'neg' column provided and no default available.")
+                return None
         if neg_col in columns:
             return neg_col
         print("⚠ Invalid column name. Try again.")
+        attempts += 1
+    print("❌ Max attempts reached. Skipping 'neg' thresholding.")
+    return None
 
 def preprocess_file(filepath, outdir, fallback_threshold=2):
     df = pd.read_csv(filepath, sep='\t', header=0)
     base = os.path.basename(filepath).replace('.tsv', '')
 
-    if "vbc_read_col" not in df.columns:
-        df.insert(0, "vbc_read_col", df.index.astype(str))
-
-    column_mapping = get_column_mapping(df.columns.tolist(), os.path.basename(filepath))
+    original_file_columns = df.columns.tolist()
+    column_mapping = get_column_mapping(original_file_columns, os.path.basename(filepath))
     df = df.rename(columns=column_mapping)
     standardized_cols = df.columns.tolist()
 
-    neg_col = identify_neg_column(standardized_cols)
-    neg_values = df[neg_col].dropna().to_numpy()
+    neg_col = identify_neg_column(standardized_cols, default_neg='neg')
 
-    if len(neg_values) == 0:
+    if "barcodes" not in df.columns:
+        raise ValueError(f"❌ You must map a column to 'barcodes' in {filepath}")
+
+    # Determine threshold
+    if neg_col is None or neg_col not in df.columns:
         threshold = fallback_threshold
-        print(f"⚠ No valid neg values found. Using fallback threshold: {threshold}")
+        print(f"⚠ No valid 'neg' column. Using fallback threshold = {threshold}")
     else:
-        threshold = np.mean(neg_values) + np.std(neg_values)
-        print(f"✅ Using threshold = mean + std = {threshold:.4f}")
+        neg_values = df[neg_col].dropna().to_numpy()
+        if len(neg_values) == 0:
+            threshold = fallback_threshold
+            print(f"⚠ No values in 'neg' column. Using fallback threshold = {threshold}")
+        else:
+            threshold = np.mean(neg_values) + np.std(neg_values)
+            print(f"✅ Using threshold = mean + std = {threshold:.4f}")
 
-    # Apply threshold to all non-barcode columns
-    non_vbc = [col for col in df.columns if col.lower() not in ["vbc_read_col", "barcodes"]]
-
-    # Coerce to float and drop bad values
+    non_vbc = [col for col in df.columns if col.lower() not in ["barcodes"]]
     df[non_vbc] = df[non_vbc].apply(pd.to_numeric, errors="coerce")
 
     print(f"📊 Applying threshold to columns: {non_vbc}")
-
-    # Count nonzero values before thresholding
     pre_thresh_nonzero = (df[non_vbc] > 0).sum().sum()
-
-    # Apply threshold: keep values >= threshold, else zero
-    df[non_vbc] = df[non_vbc].applymap(lambda x: x if pd.notnull(x) and x >= threshold else 0)
-
-    # Count nonzero values after thresholding
+    df[non_vbc] = df[non_vbc].apply(lambda col: col.where(col >= threshold, 0))
     post_thresh_nonzero = (df[non_vbc] > 0).sum().sum()
-    num_zeroed = pre_thresh_nonzero - post_thresh_nonzero
+    print(f"🧹 Thresholding complete: {int(pre_thresh_nonzero - post_thresh_nonzero)} values set to zero.")
 
-    print(f"🧹 Thresholding complete: {int(num_zeroed)} values set to zero.")
-
-
-    # Remove all-zero rows (excluding 'vbc_read_col')
     df = df.loc[(df[non_vbc] > 0).any(axis=1)]
 
-    # Remove rows where 'neg' column is > 0
-    df = df[df[neg_col] == 0]
+    if neg_col in df.columns:
+        df = df[df[neg_col] == 0]
 
-    # Save cleaned individual file
     cleaned_path = os.path.join(outdir, f"{base}_cleaned.tsv")
     df.to_csv(cleaned_path, sep='\t', index=False)
     print(f"💾 Saved cleaned file to {cleaned_path}\n")
 
     return df
+
+
 
 def main(input_dir, output_dir, fallback_threshold):
     os.makedirs(output_dir, exist_ok=True)
