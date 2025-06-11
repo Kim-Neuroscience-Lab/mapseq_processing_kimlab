@@ -407,7 +407,22 @@ pe = symbols('p_e')
 pe_solutions = sympy.solve((1 - (1 - pe)**len(projections)) * total_projections - observed_cells, pe, force=True)
 
 # Extract only real solutions within (0,1)
-valid_symbolic_solutions = [sol.evalf() for sol in pe_solutions if sol.is_real and 0 < sol < 1]
+#valid_symbolic_solutions = [sol.evalf() for sol in pe_solutions if sol.is_real and 0 < sol < 1]
+
+#Debug to print solutions before the possible failures in the next step
+print(f"🔍 Raw pe_solutions: {pe_solutions}")
+
+#Extract only real solutions within (0,1) updated to handle complex solution evaluations
+valid_symbolic_solutions = []
+for sol in pe_solutions:
+    try:
+        if sol.is_real:
+            val = float(sol.evalf())
+            if 0 < val < 1:
+                valid_symbolic_solutions.append(val)
+    except Exception as e:
+        print(f"⚠️ Skipping symbolic solution {sol} due to error: {e}")
+
 
 # Compute empirical p_e
 pe_empirical = np.mean(list(psdict.values()))
