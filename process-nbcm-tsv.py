@@ -680,6 +680,9 @@ plt.title('Elbow Method For Optimal k',fontsize=20)
 plt.legend()
 
 elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.pdf"))
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.svg"))
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.png"))
+
 
 km = k_means(df.to_numpy(), n_clusters=6) #THIS WAS INITIALLY 6, I THINK THEY PULL IT FROM OUTPUT in their original jupyter notebook.
 km[0].shape
@@ -714,6 +717,8 @@ for i in range(km[0].shape[0]):
 fig.colorbar(ax_,label='Projection Strength')
 
 fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.svg"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.png"))
 
 def concatenate_list_data(slist,join=motif_join):
     result = []
@@ -937,6 +942,8 @@ adjust_text(
 )
 
 fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.svg"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.png"))
 
 def gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,expected,savepath=plot_dir, hide_singlets=True,figsize=(16,35)):
     """
@@ -997,7 +1004,7 @@ if full_data:
     fig_size2 = (20,140) #(20,140)
 else:
     fig_size2 = (20,10)
-gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.join(plot_dir, sample_name + "_per_cell_proj_strength.pdf"))
+gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.join(plot_dir, sample_name + "_per_cell_proj_strength.svg"))
 #
 #
 
@@ -1067,6 +1074,8 @@ clusterfig = sn.clustermap(
 clusterfig.ax_heatmap.set_title(sample_name.replace('_', ' '))
 clusterfig.ax_heatmap.axes.get_yaxis().set_visible(False)
 clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.pdf"))
+clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.svg"))
+clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.png"))
 
 
 def gen_prob_matrix(df : pd.DataFrame):
@@ -1103,6 +1112,8 @@ ax = sn.heatmap(probmat.T,mask=probmat.T == 1,ax=ax,cbar_kws=dict(label='$P(B | 
 ax.set_xlabel("Area A",fontsize=16)
 ax.set_ylabel("Area B",fontsize=16)
 plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.svg"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.png"))
 
 def remove_zero_rows(df):
     df_ = df.fillna(0)
@@ -1313,6 +1324,8 @@ glabels += ["{} targets \n {:0.3}\%".format(i+2,100*j/c_tot) for (i,j) in zip(ra
 patches, texts = plt.pie(c.to_numpy().flatten(),labels=glabels)
 [txt.set_fontsize(8) for txt in texts]
 plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.svg"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.png"))
 
 maxproj = TSNE(n_components=2,metric='cosine').fit_transform(df.to_numpy(copy=True))
 
@@ -1329,6 +1342,8 @@ sc = plt.scatter(maxproj[:,0],maxproj[:,1],c=tlabels) #c=maxprojclusters[1]
 cb = plt.colorbar(sc)
 cb.set_label("Maximum Projection Target",fontsize=20)
 plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.pdf"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.svg"))
+plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.png"))
 
 def prepare_upset_data(df):
     #mask1 = [i for (i,x) in enumerate(motif_labels) if len(x) > 1]
@@ -1466,6 +1481,8 @@ def kplot(df, size=(30,12)):
 
 fig, _ = kplot(dfdata)
 fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.svg"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.png"))
 
 def kplot(df, size=(30,12)):
     """
@@ -1516,5 +1533,7 @@ def kplot(df, size=(30,12)):
 fig,_ = kplot(dfdata)
 
 fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.pdf"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.svg"))
+fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.png"))
 
 df.astype(bool).sum()
