@@ -1,45 +1,113 @@
-import PySimpleGUI as sg
-import subprocess
 import os
+import subprocess
+import platform
+import shutil
+import sys
+import requests
 
-layout = [
-    [sg.Text("Sample Naming Prefix:"), sg.Input(key="sample_name")],
-    [sg.Text("Select your nbcm.tsv (individual or aggregated):"), sg.Input(key="data_file"), sg.FileBrowse(file_types=(("CSV/TSV Files", "*.csv *.tsv"),))],
-    [sg.Text("Output Directory (will not prompt on overwrite):"), sg.Input(key="out_dir"), sg.FolderBrowse()],
-    [sg.Text("Alpha (see readme):"), sg.Input(key="alpha", default_text="0.05")],
-    [sg.Text("Labels (see sample data for example):"), sg.Input(key="labels")],
-    [sg.Text("Filter: Minimum Injection site UMI"), sg.Input(key="injection_umi_min", default_text="1")],
-    [sg.Text("Filter: At least one target UMI > X"), sg.Input(key="min_target_count", default_text="10")],
-    [sg.Text("Filter: Min Injection-to-Target Ratio:"), sg.Input(key="min_body_to_target_ratio", default_text="10")],
-    [sg.Text("Filter: Noise. Zero any matrix value less than X"), sg.Input(key="target_umi_min", default_text="2")],
-    [sg.Checkbox("Experimental: Remove high-UMI outliers where value was > (mean+2*StdDev)", key="apply_outlier_filtering")],
-    [sg.Button("Run"), sg.Exit()]
-]
+GIT_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git"
+ENV_NAME = "mapseq_processing"
+GUI_EXE_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases/download/v0.2.0-beta/MAPseq_Wizard.exe"
 
-window = sg.Window("NBCM Processing GUI Wizard", layout)
+def prompt_install_path(default_path):
+    print(f"\n📁 Default Miniconda install location: {default_path}")
+    custom_path = input("Enter custom install path (or press Enter to use default): ").strip()
+    return custom_path if custom_path else default_path
 
-while True:
-    event, values = window.read()
-    if event in (None, 'Exit'):
-        break
-    if event == "Run":
-        cmd = [
-            "conda", "run", "-n", "mapseq_processing", "python", "process-nbcm-tsv.py",
-            "--sample_name", values["sample_name"],
-            "--data_file", values["data_file"],
-            "--out_dir", values["out_dir"],
-            "--alpha", values["alpha"],
-            "--labels", values["labels"],
-            "--injection_umi_min", values["injection_umi_min"],
-            "--min_target_count", values["min_target_count"],
-            "--min_body_to_target_ratio", values["min_body_to_target_ratio"],
-            "--target_umi_min", values["target_umi_min"]
-        ]
+def install_miniconda(install_path):
+    url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
+    installer = "Miniconda3.exe"
 
-        if values["apply_outlier_filtering"]:
-            cmd += ["--apply_outlier_filtering"]
+    print("🔍 Downloading Miniconda...")
+    subprocess.run(["curl", "-L", "-o", installer, url], check=True)
 
-        print("🔧 Running:", " ".join(cmd))
-        subprocess.run(cmd)
+    print(f"🔧 Installing Miniconda to: {install_path}")
+    subprocess.run([
+        installer,
+        "/InstallationType=JustMe",
+        "/RegisterPython=0",
+        "/AddToPath=1",
+        "/S",
+        f"/D={install_path}"
+    ], check=True)
 
-window.close()
+def conda(cmd, conda_exe):
+    subprocess.run([conda_exe] + cmd, check=True)
+
+def download_gui_exe(url, target_path):
+    print(f"⬇️  Downloading GUI .exe from: {url}")
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+
+    with open(target_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print(f"✅ GUI exe saved to: {target_path}")
+
+def create_env_and_setup(conda_exe, install_dir):
+    print(f"\n📦 Creating environment '{ENV_NAME}'...")
+    conda(["create", "-y", "-n", ENV_NAME, "python=3.9", "pip"], conda_exe)
+
+    print("🔁 Adding channels: conda-forge, bioconda")
+    conda(["config", "--add", "channels", "conda-forge"], conda_exe)
+    conda(["config", "--add", "channels", "bioconda"], conda_exe)
+
+    print("🐙 Cloning project repository...")
+    git_dir = os.path.join(install_dir, "mapseq_processing_kimlab")
+    if not os.path.exists(git_dir):
+        subprocess.run(["git", "clone", GIT_URL], cwd=install_dir, check=True)
+    else:
+        print("📂 Repo already cloned.")
+
+    # Download the GUI exe into the cloned repo directory
+    gui_exe_path = os.path.join(git_dir, "MAPseq_Wizard.exe")
+    if not os.path.exists(gui_exe_path):
+        download_gui_exe(GUI_EXE_URL, gui_exe_path)
+    else:
+        print(f"✅ GUI exe already exists at: {gui_exe_path}")
+
+    requirements_path = os.path.join(git_dir, "requirements.txt")
+    if os.path.exists(requirements_path):
+        print("📄 Installing dependencies from cloned requirements.txt...")
+        subprocess.run([
+            conda_exe, "run", "-n", ENV_NAME, "pip", "install", "-r", requirements_path
+        ], check=True)
+    else:
+        print(f"⚠️ No requirements.txt found in {git_dir}")
+
+def main():
+    try:
+        if platform.system() != "Windows":
+            print("❌ This setup wizard is for Windows only.")
+            input("Press Enter to exit...")
+            return
+
+        default_path = os.path.expanduser("~\\Miniconda3")
+        install_path = prompt_install_path(default_path)
+
+        if not os.path.isdir(install_path):
+            os.makedirs(install_path, exist_ok=True)
+
+        conda_exe = os.path.join(install_path, "Scripts", "conda.exe")
+
+        if not os.path.exists(conda_exe):
+            print("\n❗ Conda not found. Installing Miniconda...")
+            install_miniconda(install_path)
+        else:
+            print("✅ Conda already installed.")
+
+        if not os.path.exists(conda_exe):
+            raise FileNotFoundError(f"conda.exe not found at {conda_exe}")
+
+        create_env_and_setup(conda_exe, install_path)
+        print("\n✅ All steps completed. You can now run MAPseq_Wizard.exe from the project directory!")
+
+    except subprocess.CalledProcessError as e:
+        print(f"\n🚨 Subprocess failed: {e}")
+    except Exception as e:
+        print(f"\n⚠️ Unexpected error: {e}")
+
+    input("\n📝 Press Enter to exit...")
+
+if __name__ == "__main__":
+    main()
