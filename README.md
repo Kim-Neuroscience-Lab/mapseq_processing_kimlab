@@ -14,7 +14,7 @@ Code found here is generally a work in progress until publication.
 
 ## EXE Installation (Windows Only)
 
-1. Download the ost recent Setup_Wizard.exe from the releases page.
+1. Download the most recent Setup_Wizard.exe from the releases page.
 
 2. Run the file and wait for it to complete the installation (Default location is the user directory).
 
