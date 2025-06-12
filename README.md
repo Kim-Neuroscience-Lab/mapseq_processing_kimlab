@@ -107,6 +107,10 @@ Used for potential noise reduction of single UMI values in targets, but you can 
 
 **-i** = Sets a threshold value for filtering barcodes by minimim injection site UMI. (default: 1) Han et. al. sets this to 300, Klingler et. al. 2018 sets this to 100, you may set it to your desired value.
 
+**-t** = Sets a threshold value for filtering barcodes by requiring a minimim UMI value in at least one target area or the barcode is removed. (default: 10) Han et. al. sets this to 10, you may set it to your desired value.
+
+**-r** = Minimum fold-difference between 'inj' value and the highest target count. Rows not meeting this threshold are removed. (default: 10) Han et. al. sets this to 10, you may set it to your desired value.
+
 **-f** = Enable outlier filtering of barcodes. Where any target value in a row is greater than the mean of all target values in the dataset plus two standard deviations, drop that barcode. We include this argument for microdissections which neighbor the injection site and there is no good way to know if very large UMI counts are from some kind of contamination. Use this at your own discretion.
 
 **-a** = Value for alpha. This is the signifigance threshold (default 0.05) for Bonferroni correction, False Discovery Rate correction, and the Binomial Test.
