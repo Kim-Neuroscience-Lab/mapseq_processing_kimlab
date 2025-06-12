@@ -3,9 +3,11 @@ import subprocess
 import platform
 import shutil
 import sys
+import requests
 
 GIT_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git"
 ENV_NAME = "mapseq_processing"
+GUI_EXE_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases/download/v0.2.0-beta/MAPseq_Wizard.exe"
 
 def prompt_install_path(default_path):
     print(f"\n📁 Default Miniconda install location: {default_path}")
@@ -32,6 +34,16 @@ def install_miniconda(install_path):
 def conda(cmd, conda_exe):
     subprocess.run([conda_exe] + cmd, check=True)
 
+def download_gui_exe(url, target_path):
+    print(f"⬇️  Downloading GUI .exe from: {url}")
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+
+    with open(target_path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    print(f"✅ GUI exe saved to: {target_path}")
+
 def create_env_and_setup(conda_exe, install_dir):
     print(f"\n📦 Creating environment '{ENV_NAME}'...")
     conda(["create", "-y", "-n", ENV_NAME, "python=3.9", "pip"], conda_exe)
@@ -46,6 +58,13 @@ def create_env_and_setup(conda_exe, install_dir):
         subprocess.run(["git", "clone", GIT_URL], cwd=install_dir, check=True)
     else:
         print("📂 Repo already cloned.")
+
+    # Download the GUI exe into the cloned repo directory
+    gui_exe_path = os.path.join(git_dir, "MAPseq_Wizard.exe")
+    if not os.path.exists(gui_exe_path):
+        download_gui_exe(GUI_EXE_URL, gui_exe_path)
+    else:
+        print(f"✅ GUI exe already exists at: {gui_exe_path}")
 
     requirements_path = os.path.join(git_dir, "requirements.txt")
     if os.path.exists(requirements_path):
@@ -81,7 +100,7 @@ def main():
             raise FileNotFoundError(f"conda.exe not found at {conda_exe}")
 
         create_env_and_setup(conda_exe, install_path)
-        print("\n✅ All steps completed. You can now run the analysis wizard!")
+        print("\n✅ All steps completed. You can now run MAPseq_Wizard.exe from the project directory!")
 
     except subprocess.CalledProcessError as e:
         print(f"\n🚨 Subprocess failed: {e}")
