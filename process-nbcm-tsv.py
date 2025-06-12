@@ -179,12 +179,12 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, a
     matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
     print(f"🔍 Step 2: Removed zero-projection rows. Shape: {matrix.shape}")
 
-    # 🚨 Step 2b: Remove rows where all target regions are < min_target_count
+    # 🚨 Step 2b: Remove rows where no target regions are > min_target_count
     non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
     if non_neg_inj_cols:
         target_max = np.max(matrix[:, non_neg_inj_cols], axis=1)
         matrix = matrix[target_max >= min_target_count]
-        print(f"🔍 Step 2b: Removed rows with all targets < {min_target_count}. Shape: {matrix.shape}")
+        print(f"🔍 Step 2b: Removed rows with no targets > {min_target_count}. Shape: {matrix.shape}")
     else:
         print("⚠ WARNING: No valid target columns found (excluding 'inj' and 'neg'). Skipping Step 2b.")
 
@@ -676,64 +676,145 @@ print(df.head())
 print("Number of NAs:")
 print(df.isnull().sum())
 
-# Find optimal number of clusters
-Sum_of_squared_distances = []
-K = range(1,15)
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.mixture import GaussianMixture
+from sklearn.utils import resample
+from scipy.spatial.distance import cdist
+import os
+from collections import Counter
+import warnings
+warnings.filterwarnings("ignore")
+
+X = df.to_numpy()
+K = range(2, 15)  # skip k=1 for silhouette and BIC
+
+# 1. Elbow Method (Inertia)
+inertias = []
 for k in K:
-    km = k_means(df.to_numpy(), n_clusters=k)
-    Sum_of_squared_distances.append(km[2])
-len(Sum_of_squared_distances)
+    km = KMeans(n_clusters=k, n_init="auto").fit(X)
+    inertias.append(km.inertia_)
 
-elbow_plt = plt.figure(figsize=(10,7))
-s1 = np.array(Sum_of_squared_distances[0:-1])
-s2 = np.array(Sum_of_squared_distances[1:])
-plt.plot(K[0:-1], np.abs(s2-s1), 'x-', color='red',label='Delta Inertia')
-plt.plot(K, Sum_of_squared_distances, 'x-', color='blue',label='Inertia')
-plt.xlabel('k',fontsize=20)
-plt.ylabel('Inertia',fontsize=20)
-plt.title('Elbow Method For Optimal k',fontsize=20)
+# Compute elbow using max second derivative
+inertia_deltas = np.diff(inertias)
+inertia_deltas2 = np.diff(inertia_deltas)
+elbow_k = K[np.argmax(inertia_deltas2) + 2]  # +2 due to double diff
+
+# 2. Silhouette Score
+sil_scores = []
+for k in K:
+    km = KMeans(n_clusters=k, n_init="auto").fit(X)
+    sil_scores.append(silhouette_score(X, km.labels_))
+silhouette_k = K[np.argmax(sil_scores)]
+
+# 3. Gap Statistic
+def compute_gap_statistic(X, refs=10):
+    gaps = []
+    for k in K:
+        km = KMeans(n_clusters=k, n_init="auto").fit(X)
+        disp = np.mean(np.min(cdist(X, km.cluster_centers_, 'euclidean'), axis=1))
+
+        ref_disps = []
+        for _ in range(refs):
+            X_ref = np.random.uniform(X.min(axis=0), X.max(axis=0), X.shape)
+            km_ref = KMeans(n_clusters=k, n_init="auto").fit(X_ref)
+            ref_disp = np.mean(np.min(cdist(X_ref, km_ref.cluster_centers_, 'euclidean'), axis=1))
+            ref_disps.append(ref_disp)
+
+        gap = np.log(np.mean(ref_disps)) - np.log(disp)
+        gaps.append(gap)
+    return gaps
+
+gaps = compute_gap_statistic(X)
+gap_k = K[np.argmax(gaps)]
+
+# 4. BIC using GMM
+bics = []
+for k in K:
+    gmm = GaussianMixture(n_components=k, n_init=1).fit(X)
+    bics.append(gmm.bic(X))
+bic_k = K[np.argmin(bics)]
+
+# Consensus vote
+votes = [elbow_k, silhouette_k, gap_k, bic_k]
+vote_counts = Counter(votes)
+consensus_k = vote_counts.most_common(1)[0][0]
+
+# Optional: Print diagnostic info
+print(f"Elbow k = {elbow_k}, Silhouette k = {silhouette_k}, Gap k = {gap_k}, BIC k = {bic_k}")
+print(f"Consensus k = {consensus_k}")
+
+# Plot Inertia + Delta
+plt.figure(figsize=(10, 7))
+plt.plot(K, inertias, 'x-', color='blue', label='Inertia')
+plt.axvline(x=elbow_k, color='gray', linestyle='--', label=f'Elbow: k={elbow_k}')
+plt.axvline(x=silhouette_k, color='green', linestyle='--', label=f'Silhouette: k={silhouette_k}')
+plt.axvline(x=gap_k, color='orange', linestyle='--', label=f'Gap: k={gap_k}')
+plt.axvline(x=bic_k, color='purple', linestyle='--', label=f'BIC: k={bic_k}')
+plt.axvline(x=consensus_k, color='red', linestyle=':', linewidth=2.0, label=f'Consensus: k={consensus_k}')
+plt.xlabel('k', fontsize=20)
+plt.ylabel('Inertia', fontsize=20)
+plt.title('Cluster Evaluation Methods', fontsize=20)
 plt.legend()
+plt.tight_layout()
 
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.pdf"))
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.svg"))
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "elbow_plot.png"))
+# Save plots
+elbow_plt = plt.gcf()
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.pdf"))
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.svg"))
+elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.png"))
 
+# 🚀 Use consensus_k for final clustering
+km = KMeans(n_clusters=consensus_k, n_init="auto").fit(X)
 
-km = k_means(df.to_numpy(), n_clusters=6) #THIS WAS INITIALLY 6, I THINK THEY PULL IT FROM OUTPUT in their original jupyter notebook.
-km[0].shape
+from sklearn.cluster import KMeans
+from matplotlib.colors import LinearSegmentedColormap
+import numpy as np
+import matplotlib.pyplot as plt
+import os
 
+# Clustering
+X = df.to_numpy()
+km = KMeans(n_clusters=consensus_k, n_init="auto").fit(X)
+clusters, regions = km.cluster_centers_.shape
+
+# Save Data
 df.to_csv(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv"))
 
-scolors = ['black','red','orange','yellow'] #['lightblue','darkblue'] 
-scm = LinearSegmentedColormap.from_list(
-        'white_to_red', scolors, N=100)
-fig,ax = plt.subplots(nrows=1,ncols=1)
-fig.set_size_inches(10,10)
-clusters,regions = km[0].shape
+# Plotting setup
+scolors = ['black', 'red', 'orange', 'yellow']
+scm = LinearSegmentedColormap.from_list('white_to_red', scolors, N=100)
+fig, ax = plt.subplots(figsize=(10, 10))
+
+# Axes labels and style
 ax.set_title("K-means Clustering")
 ax.set_xlabel("Regions")
 ax.set_ylabel("Cluster")
 ax.set_xticks(range(regions))
-ax.set_xticklabels(df.columns.to_list())
-##
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-ax.spines['bottom'].set_visible(False)
-ax.spines['left'].set_visible(False)
-ax.set_yticks(range(0,clusters,1))
-ax.set_yticklabels(range(1,clusters+1,1))
-X = range(regions)
-for i in range(km[0].shape[0]):
-    y = np.array([i]).repeat(regions)
-    size = km[0][i]
-    size = (size - size.min()) / (size.max() - size.min())
-    ax_ = ax.scatter(x=X,y=y,s=1000,cmap=scm,c=size)
+ax.set_xticklabels(df.columns.to_list(), rotation=45, ha='right')
+ax.set_yticks(range(clusters))
+ax.set_yticklabels(range(1, clusters + 1))
+for spine in ['top', 'right', 'bottom', 'left']:
+    ax.spines[spine].set_visible(False)
 
-fig.colorbar(ax_,label='Projection Strength')
+# Data plot
+X_vals = range(regions)
+for i in range(km.n_clusters):
+    y_vals = np.full(regions, i)
+    size = km.cluster_centers_[i]
+    size_norm = (size - size.min()) / (size.max() - size.min()) if size.max() > size.min() else size
+    ax_ = ax.scatter(x=X_vals, y=y_vals, s=1000, c=size_norm, cmap=scm)
 
+# Add colorbar
+fig.colorbar(ax_, label='Normalized Projection Strength')
+
+# Save plot
 fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.pdf"))
 fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.svg"))
 fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.png"))
+
 
 def concatenate_list_data(slist,join=motif_join):
     result = []
@@ -1092,6 +1173,55 @@ clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heat
 clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.svg"))
 clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.png"))
 
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.cluster.hierarchy import linkage
+from scipy.spatial.distance import pdist
+
+print("🔍 Generating Han-style heatmap...")
+
+# Custom colormap (white → orange)
+han_colors = ['white', 'orange']
+han_cm = LinearSegmentedColormap.from_list('white_to_orange', han_colors, N=100)
+
+# Target area column matching (Han 2018)
+han_targets = ['LM', 'AL', 'PM', 'AM', 'RL']
+han_order_full = [col for pattern in han_targets for col in df.columns if re.match(f"{pattern}\\d*", col)]
+han_order_full = list(dict.fromkeys(han_order_full))
+
+if not han_order_full:
+    raise ValueError("No matching columns found for Han-style target area pattern.")
+
+# Subset
+df_han = df[han_order_full if full_data else [col for col in han_targets if col in df.columns]]
+print(f"🧬 Han target columns: {df_han.columns.tolist()}")
+
+# Log-transform with offset and normalize
+df_han = np.log1p(df_han + 1e-3)
+df_han = df_han.div(df_han.max(axis=1), axis=0).fillna(0)
+
+# Compute row clustering
+row_linkage = linkage(pdist(df_han, metric='euclidean'), method='ward')
+
+# Draw clustermap
+clusterfig_han = sns.clustermap(
+    df_han,
+    row_linkage=row_linkage,
+    col_cluster=False,
+    cmap=han_cm,
+    vmin=0.0,
+    vmax=1.0,
+    cbar_kws=dict(label='Projection Strength')
+)
+
+# Annotate and save
+clusterfig_han.ax_heatmap.set_title(sample_name.replace('_', ' ') + ' (Han-style)')
+clusterfig_han.ax_heatmap.axes.get_yaxis().set_visible(False)
+
+for ext in ['pdf', 'svg', 'png']:
+    clusterfig_han.savefig(os.path.join(plot_dir, f"{sample_name}_Hanstyle_cluster_heatmap.{ext}"))
+
+print("✅ Han-style heatmap generated and saved.")
 
 def gen_prob_matrix(df : pd.DataFrame):
     data = df.to_numpy(copy=True)
@@ -1550,5 +1680,216 @@ fig,_ = kplot(dfdata)
 fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.pdf"))
 fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.svg"))
 fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.png"))
+
+### === Arrow Diagram Panels f and g === ###
+import networkx as nx
+from itertools import combinations
+from scipy.stats import binom
+from statsmodels.stats.multitest import fdrcorrection
+from matplotlib.lines import Line2D
+
+manual_region_order = ["RSP", "PM", "AM", "A", "RL", "AL", "LM"]
+regions = [r for r in manual_region_order if r in df.columns]
+matrix = df[regions].apply(pd.to_numeric, errors='coerce').to_numpy()
+
+# Binary projection matrix
+binary_matrix = (matrix > 0).astype(int)
+n_cells = binary_matrix.shape[0]
+
+# === Panel f: Dedicated Projections ===
+proj_counts = binary_matrix.sum(axis=1)
+only_one_proj = (proj_counts == 1)
+dedicated_cells = binary_matrix[only_one_proj]
+dedicated_counts = dedicated_cells.sum(axis=0)
+
+plt.figure(figsize=(8, 5))
+plt.bar(regions, dedicated_counts, color='gray')
+plt.ylabel("Number of Dedicated Neurons")
+plt.title("Fig 10f: Dedicated Projection Neurons")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig(os.path.join(plot_dir, f"{sample_name}_panel_f_dedicated.svg"), format='svg')
+plt.close()
+
+# === Panel g: Motif Significance Analysis ===
+region_probs = binary_matrix.mean(axis=0)
+motif_stats = []
+observed_counts = {}
+
+for r in [2, 3, 4]:
+    for combo in combinations(range(len(regions)), r):
+        combo_mask = binary_matrix[:, combo].sum(axis=1) == r
+        count = np.sum(combo_mask)
+        observed_counts[combo] = count
+        expected_prob = np.prod(region_probs[list(combo)])
+        expected_count = expected_prob * n_cells
+        pval = binom.sf(count - 1, n_cells, expected_prob) if expected_prob > 0 else 1.0
+        motif_stats.append({
+            "motif": '+'.join(sorted([regions[i] for i in combo])),
+            "combo": combo,
+            "size": r,
+            "observed": count,
+            "expected": expected_count,
+            "pval": pval,
+            "observed_minus_expected": count - expected_count
+        })
+
+# FDR correction
+pvals = [m['pval'] for m in motif_stats]
+rejected, corrected_pvals = fdrcorrection(pvals, alpha=0.05)
+for i, val in enumerate(motif_stats):
+    val['FDR_pval'] = corrected_pvals[i]
+    val['significant'] = rejected[i]
+
+motif_df = pd.DataFrame(motif_stats)
+motif_df.to_csv(os.path.join(plot_dir, f"{sample_name}_motif_significance.csv"), index=False)
+
+print("\n--- Generating 2-region motif graphs ---")
+# === NetworkX for 2-region motifs ===
+pair_counts = {k: v for k, v in observed_counts.items() if len(k) == 2}
+G = nx.Graph()
+for label in regions:
+    G.add_node(label)
+
+max_count = max(pair_counts.values())
+for (i, j), count in pair_counts.items():
+    region_i, region_j = regions[i], regions[j]
+    motif_label = '+'.join(sorted([region_i, region_j]))
+    row = motif_df[(motif_df['motif'] == motif_label) & (motif_df['size'] == 2)]
+    if not row.empty:
+        observed = row['observed'].values[0]
+        expected = row['expected'].values[0]
+        diff = observed - expected
+        color = 'red' if row['significant'].values[0] and diff > 0 else ('blue' if row['significant'].values[0] and diff < 0 else 'black')
+        width = 1 + 9 * (observed / max_count)
+        G.add_edge(region_i, region_j, weight=width, color=color)
+
+# Draw
+angle_step = 2 * np.pi / len(regions)
+pos = {
+    region: np.array([np.cos(i * angle_step), np.sin(i * angle_step)])
+    for i, region in enumerate(manual_region_order)
+}
+edges = G.edges(data=True)
+colors = [e[2]['color'] for e in edges]
+widths = [e[2]['weight'] for e in edges]
+
+plt.figure(figsize=(8, 8))
+nx.draw_networkx(G, pos, with_labels=True, node_size=1000, edge_color=colors, width=widths)
+plt.title("Fig 10g: Broadcasting Neurons - Significant 2-Region Motifs")
+legend_elements = [
+    Line2D([0], [0], color='red', lw=2, label='Overrepresented'),
+    Line2D([0], [0], color='blue', lw=2, label='Underrepresented'),
+    Line2D([0], [0], color='black', lw=2, label='Not Significant')
+]
+plt.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
+plt.tight_layout()
+plt.savefig(os.path.join(plot_dir, f"{sample_name}_panel_g_broadcasting.svg"))
+plt.close()
+
+print("\n--- Generating 3- and 4-region motif graphs ---")
+for r in [3, 4]:
+    print(f"Checking {r}-way motifs...")
+    filtered = motif_df[(motif_df['size'] == r)]
+    if not filtered.empty:
+        print(f"→ Found {len(filtered)} {r}-way motifs. Building graph...")
+        max_count_r = filtered['observed'].max()
+        G_multi = nx.Graph()
+
+        for _, row in filtered.iterrows():
+            motif_nodes = row['motif'].split('+')
+            observed = row['observed']
+            expected = row['expected']
+            diff = observed - expected
+            color = 'red' if row['significant'] and diff > 0 else ('blue' if row['significant'] and diff < 0 else 'black')
+            width = 1 + 4 * (observed / max(1, max_count_r))
+
+            for i, j in combinations(motif_nodes, 2):
+                if G_multi.has_edge(i, j):
+                    if G_multi[i][j]['weight'] < width:
+                        G_multi[i][j]['color'] = color
+                        G_multi[i][j]['weight'] = width
+                else:
+                    G_multi.add_edge(i, j, color=color, weight=width)
+
+        angle_step = 2 * np.pi / len(manual_region_order)
+        pos = {
+            region: np.array([np.cos(i * angle_step), np.sin(i * angle_step)])
+            for i, region in enumerate(manual_region_order)
+            if region in G_multi.nodes
+        }
+
+        edge_colors = [e[2]['color'] for e in G_multi.edges(data=True)]
+        edge_weights = [e[2]['weight'] for e in G_multi.edges(data=True)]
+
+        plt.figure(figsize=(8, 8))
+        nx.draw_networkx(G_multi, pos, with_labels=True, node_size=1000,
+                         edge_color=edge_colors, width=edge_weights)
+        plt.title(f"Fig 10g Extension: {r}-Region Motifs")
+
+        legend_elements = [
+            Line2D([0], [0], color='red', lw=2, label='Overrepresented'),
+            Line2D([0], [0], color='blue', lw=2, label='Underrepresented'),
+            Line2D([0], [0], color='black', lw=2, label='Not Significant')
+        ]
+        plt.legend(handles=legend_elements, loc='lower center',
+                   bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
+
+        plt.tight_layout()
+        fig_path = os.path.join(plot_dir, f"{sample_name}_panel_g_{r}way_broadcasting.svg")
+        plt.savefig(fig_path, format='svg')
+        plt.close()
+        print(f"✅ Saved {r}-way broadcasting motif network to {fig_path}")
+
+# Optional: Save significant motif lists to text files
+for r in [3, 4]:
+    filtered = motif_df[(motif_df['size'] == r) & (motif_df['significant'])]
+    if not filtered.empty:
+        txt_path = os.path.join(plot_dir, f"{sample_name}_motif_{r}way_significant.txt")
+        with open(txt_path, 'w') as f:
+            for _, row in filtered.iterrows():
+                f.write(f"{row['motif']}: Observed={row['observed']}, "
+                        f"Expected={row['expected']:.2f}, "
+                        f"p={row['FDR_pval']:.3g}\n")
+        print(f"✅ Saved significant {r}-way motifs to {txt_path}")
+
+
+### === K-Means Cluster Centroid Heatmap === ###
+from sklearn.cluster import KMeans
+from matplotlib.colors import LinearSegmentedColormap
+
+scolors = ['white', 'red']
+scm = LinearSegmentedColormap.from_list('white_to_red', scolors, N=256)
+
+# Optionally reorder columns (if you want Han-style ordering)
+# region_order = ["RSP", "PM", "AM", "A", "RL", "AL", "LM"]
+# df = df[[col for col in region_order if col in df.columns]]
+
+k_clusters = consensus_k if 'consensus_k' in locals() else 8
+kmeans = KMeans(n_clusters=k_clusters, random_state=42)
+kmeans.fit(df)
+centroids = kmeans.cluster_centers_
+
+fig, ax = plt.subplots(figsize=(12, 8))
+im = ax.imshow(centroids, aspect='auto', cmap=scm, vmin=0, vmax=1)
+ax.set_title("Projection Motif Clusters (Extended Data Fig. 10 Style)", fontsize=14)
+ax.set_xlabel("Target Regions", fontsize=12)
+ax.set_ylabel("Cluster ID", fontsize=12)
+ax.set_xticks(range(len(df.columns)))
+ax.set_xticklabels(df.columns, rotation=45, ha='right')
+ax.set_yticks(range(k_clusters))
+ax.set_yticklabels([f"Cluster {i+1}" for i in range(k_clusters)])
+
+for spine in ax.spines.values():
+    spine.set_visible(False)
+ax.tick_params(top=False, bottom=True, left=True, right=False)
+
+cbar = fig.colorbar(im, ax=ax, orientation='vertical')
+cbar.set_label('Normalized Projection Strength', rotation=270, labelpad=15)
+
+fig.tight_layout()
+fig.savefig(os.path.join(plot_dir, f"{sample_name}_ExtendedDataFig10_Recreation.svg"), format='svg')
+plt.close()
+
 
 df.astype(bool).sum()
