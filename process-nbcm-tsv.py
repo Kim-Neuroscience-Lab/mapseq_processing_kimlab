@@ -67,6 +67,15 @@ parser.add_argument(
 # Parse arguments
 args = parser.parse_args()
 
+# Handle both string and list input for labels
+if isinstance(args.labels, str):
+    args.labels = args.labels.strip('"').strip("'")  # Strip quotes
+    sample_labels = [label.strip().strip('"').strip("'") for label in args.labels.split(",")]
+elif isinstance(args.labels, list):
+    sample_labels = [label.strip().strip('"').strip("'") for label in args.labels]
+else:
+    sample_labels = None
+
 # Define variables dynamically from arguments
 out_dir = args.out_dir
 sample_name = args.sample_name
@@ -75,7 +84,6 @@ alpha = args.alpha
 min_target_count = args.min_target_count
 min_body_to_target_ratio = args.min_body_to_target_ratio
 target_umi_min = args.target_umi_min
-sample_labels = args.labels.split(",") if args.labels else None
 special_area_1 = args.special_area_1
 special_area_2 = args.special_area_2
 
@@ -365,7 +373,7 @@ assert normalized_matrix.shape[1] == len(columns), (
 )
 
 # Save the normalized matrix to CSV for future analysis in the script
-normalized_matrix_file = os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv")
+normalized_matrix_file = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv"))
 pd.DataFrame(normalized_matrix, columns=columns).to_csv(normalized_matrix_file, index=False, float_format="%.8f")
 print(f"💾 Normalized matrix saved to: 📂 {normalized_matrix_file}")
 
@@ -394,7 +402,7 @@ simplified_pi = sympy.simplify(pi)
 print("Simplified Pi:", simplified_pi)
 
 # Save LaTeX representation of simplified Pi
-save_latex_expression(simplified_pi, "Simplified Pi Visualization", os.path.join(out_dir, f"{sample_name}_Simplified_Pi.png"))
+save_latex_expression(simplified_pi, "Simplified Pi Visualization", os.path.normpath(os.path.join(out_dir, f"{sample_name}_Simplified_Pi.png")))
 
 # Calculate probabilities
 psdict = calculate_probabilities(projections, total_projections)
@@ -467,24 +475,28 @@ print(f"🔍 Total Motif Probability After Normalization (must sum to 1): {sum(m
 if not np.isclose(float(sum(motif_probs.values())), 1, atol=0.01):
     print(f"🚨 WARNING: Motif probabilities sum to {sum(motif_probs.values())}, not 1.")
 
+normalized_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv"))
 
+# Dynamically match labels for important areas
+special_area_1_label = next((label for label in columns if re.match(f"{args.special_area_1}\\d*", label)), None)
+special_area_2_label = next((label for label in columns if re.match(f"{args.special_area_2}\\d*", label)), None)
 
-    normalized_path = os.path.join(output_dir, f"{sample_name}_Normalized_Matrix.csv")
-    # Dynamically match labels for important areas
-    special_area_1_label = next((label for label in columns if re.match(f"{args.special_area_1}\\d*", label)), None)
-    special_area_2_label = next((label for label in columns if re.match(f"{args.special_area_2}\\d*", label)), None)
-    column_counts_path = os.path.join(output_dir, f"{sample_name}_Column_Counts.csv")
-        #if special_area_1_label and special_area_2_label:
-    #    print(f"Matched labels: {special_area_1_label}, #{special_area_2_label}")
-    #    # Replace hardcoded logic with dynamic labels
-    root_save_path = os.path.join(output_dir, f"{sample_name}_Roots.csv")
-    pi_save_path = os.path.join(output_dir, f"{sample_name}_Simplified_Pi.csv")
-    region_probs_path = os.path.join(output_dir, f"{sample_name}_Region-specific_Probabilities.csv")
-    calculated_path = os.path.join(output_dir, f"{sample_name}_Calculated_Value.csv")
-    std_dev_path = os.path.join(output_dir, f"{sample_name}_Standard_Deviation.csv")
-    motif_test_path = os.path.join(output_dir, f"{sample_name}_Motif_Binomial_Results.csv")
+column_counts_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Column_Counts.csv"))
+
+# if special_area_1_label and special_area_2_label:
+#     print(f"Matched labels: {special_area_1_label}, #{special_area_2_label}")
+#     # Replace hardcoded logic with dynamic labels
+
+root_save_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Roots.csv"))
+pi_save_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Simplified_Pi.csv"))
+region_probs_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Region-specific_Probabilities.csv"))
+calculated_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Calculated_Value.csv"))
+std_dev_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Standard_Deviation.csv"))
+motif_test_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Motif_Binomial_Results.csv"))
+
 log_scaled_value = sum(np.log(psdict[label]) for label in columns)
 scaled_value = np.exp(log_scaled_value)  # Convert back from log scale
+
 
 
 # Dynamic calculation using sample_labels and total_projections
@@ -492,7 +504,7 @@ calculated_value = (1 - (1 - pe_num)**len(columns)) * observed_cells #total_proj
 print(f"🔍 Expected Observed Projections [(1-(1-p_e)*#areas)*observed cells]: {calculated_value}")
 
 # Save LaTeX representation of calculated value
-save_latex_expression(calculated_value, "Calculated Value Visualization", os.path.join(out_dir, f"{sample_name}_Calculated_Value.png"))
+save_latex_expression(calculated_value, "Calculated Value Visualization", os.path.normpath(os.path.join(out_dir, f"{sample_name}_Calculated_Value.png")))
 
 # Perform statistical tests
 if not (0 <= scaled_value <= 1):
@@ -545,7 +557,7 @@ flat_results = [
 ]
 
 # Save to CSV 
-binomial_results_file = os.path.join(out_dir, f"{sample_name}_Motif_Binomial_Results.csv")
+binomial_results_file = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Motif_Binomial_Results.csv"))
 pd.DataFrame(flat_results).to_csv(binomial_results_file, index=False)
 print(f"Motif binomial test results saved to: {binomial_results_file}")
 
@@ -598,7 +610,7 @@ plt.ylabel("Probability")
 plt.xlabel("Region")
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(os.path.join(out_dir, f"{sample_name}_Region_Probabilities.png"))
+plt.savefig(os.path.normpath(os.path.join(out_dir, f"{sample_name}_Region_Probabilities.png")))
 plt.close()
 
 # Roots scatterplot
@@ -609,23 +621,23 @@ plt.ylabel("Root Value")
 plt.xlabel("Index")
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(os.path.join(out_dir, f"{sample_name}_Roots.png"))
+plt.savefig(os.path.normpath(os.path.join(out_dir, f"{sample_name}_Roots.png")))
 plt.close()
 
 ### Analysis and Plotting Integration
 
-#Where is the normalized_matrix.csv
+# Where is the normalized_matrix.csv
 data_dir = out_dir
-file_name = os.path.join(f"{sample_name}_Normalized_Matrix.csv")
+file_name = os.path.normpath(os.path.join(data_dir, f"{sample_name}_Normalized_Matrix.csv"))
 
 
 # Load normalized matrix as input for analysis
-normalized_matrix_file = os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv")
+normalized_matrix_file = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv"))
 normalized_matrix = pd.read_csv(normalized_matrix_file)
 
 
 # Ensure 'analysis' subdirectory exists within 'out_dir'
-analysis_dir = os.path.join(out_dir, 'analysis')
+analysis_dir = os.path.normpath(os.path.join(out_dir, 'analysis'))
 os.makedirs(analysis_dir, exist_ok=True)
 
 #Where do you want the analysis output to go?
@@ -635,47 +647,48 @@ n0 = observed_cells #import from stats at beginning
 
 np.set_printoptions(suppress=True)
 
-
 def load_df(file, remove_cols=None, subset=None):
     """
-    Loads excel file specified in file which is a string for the full path
-    Excel should have column names as the first row (header)
-    remove_col specifies the names of columns to remove (list, e.g. ["DLS"])
-    subset specifies the names of columns to keep (drop others, e.g. 'LH', 'BLA', 'PFC', 'NAc'])
+    Loads CSV file specified in `file` (a full path string).
+    remove_cols: list of column names to drop.
+    subset: list of column names to retain (drops all others).
     """
-    experiment_ = pd.read_csv(file_path) #pd.read_excel(file,header=0)
-    print(experiment_.columns)
-    df = experiment_
-    #df.columns = colnames
+    try:
+        df = pd.read_csv(file)  # Supports both Windows/Linux paths via normpath above
+    except Exception as e:
+        raise IOError(f"Failed to load file {file}: {e}")
+
+    print(f"✅ Columns in loaded file: {df.columns.tolist()}")
+
     if remove_cols is not None:
         try:
             df = df.drop(columns=remove_cols)
         except Exception as e:
-            print("!!! Error: Could not remove columns. Column not found in remove_cols")
+            print(f"⚠️ Warning: Could not remove columns {remove_cols} — {e}")
+
     if subset is not None:
         try:
-            df = df[subset] #limit, removes BNST and CeA
+            df = df[subset]
         except Exception as e:
-            print("!!! Error: Could not subset columns. Column not found in subset")
+            print(f"⚠️ Warning: Could not subset to columns {subset} — {e}")
+
     return df
 
-"""
-Change the file path:
-"""
-file_path = data_dir + file_name
-if full_data:
-    #Load full data set
-    df = load_df(os.path.join(args.out_dir, f"{args.sample_name}_Normalized_Matrix.csv"), remove_cols=None, subset=None)
-else:
-    #Load special regions:
-    df = load_df(os.path.join(output_dir, f"{sample_name}_Normalized_Matrix.csv"), remove_cols=['RSP'], subset=['PM','AM','A','RL','AL','LM'])
 
-print("df shape: {}".format(df.shape))
+# Prepare file path
+file_path = os.path.normpath(os.path.join(out_dir, f"{sample_name}_Normalized_Matrix.csv"))
+
+# Load DataFrame based on `full_data` flag
+if full_data:
+    df = load_df(file_path)
+else:
+    df = load_df(file_path, remove_cols=['RSP'], subset=['PM', 'AM', 'A', 'RL', 'AL', 'LM'])
+
+print(f"df shape: {df.shape}")
 print("DF Head:")
 print(df.head())
 print("Number of NAs:")
 print(df.isnull().sum())
-
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
@@ -762,9 +775,10 @@ plt.tight_layout()
 
 # Save plots
 elbow_plt = plt.gcf()
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.pdf"))
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.svg"))
-elbow_plt.savefig(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.png"))
+#elbow_plt.savefig(os.path.normpath(os.path.join(plot_dir, sample_name + "_cluster_diagnostics.pdf")))
+for ext in ["pdf", "svg", "png"]:
+    elbow_plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_cluster_diagnostics.{ext}")))
+
 
 # 🚀 Use consensus_k for final clustering
 km = KMeans(n_clusters=consensus_k, n_init="auto").fit(X)
@@ -781,7 +795,7 @@ km = KMeans(n_clusters=consensus_k, n_init="auto").fit(X)
 clusters, regions = km.cluster_centers_.shape
 
 # Save Data
-df.to_csv(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv"))
+df.to_csv(os.path.normpath(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv")))
 
 # Plotting setup
 scolors = ['black', 'red', 'orange', 'yellow']
@@ -811,9 +825,9 @@ for i in range(km.n_clusters):
 fig.colorbar(ax_, label='Normalized Projection Strength')
 
 # Save plot
-fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.pdf"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.svg"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_kmeans.png"))
+#fig.savefig(os.path.normpath(os.path.join(plot_dir, sample_name + "_kmeans.pdf")))
+for ext in ["pdf", "svg", "png"]:
+    fig.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_kmeans.{ext}")))
 
 
 def concatenate_list_data(slist,join=motif_join):
@@ -916,7 +930,7 @@ df_obs_exp = pd.DataFrame(data=[concatenate_list_data(motif_labels),\
                                 dcounts,\
                                 exp_counts.astype(int)]).T
 df_obs_exp.columns = ['Motif','Observed','Expected']
-df_obs_exp.to_csv(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv"))
+df_obs_exp.to_csv(os.path.normpath(os.path.join(plot_dir, sample_name + "_motif_obs_exp.csv")))
 df_obs_exp
 
 ##suggested addition to give another csv without the null combination from the powerset at the top row.
@@ -929,7 +943,7 @@ df_obs_exp = df_obs_exp[df_obs_exp['Motif'] != ""]  # Adjust condition as needed
 
 # Save filtered data to CSV
 df_obs_exp.to_csv(
-    os.path.join(plot_dir, sample_name + "_motif_obs_exp_filtered.csv"), 
+    os.path.normpath(os.path.join(plot_dir, f"{sample_name}_motif_obs_exp_filtered.csv")),
     index=False
 )
 
@@ -1037,9 +1051,10 @@ adjust_text(
     force_points=1  # Increase separation force for points
 )
 
-fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.pdf"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.svg"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_effect_significance.png"))
+#fig.savefig(os.path.normpath(os.path.join(plot_dir, sample_name + "_effect_significance.pdf")))
+for ext in ["pdf", "svg", "png"]:
+    fig.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_effect_significance.{ext}")))
+
 
 def gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,expected,savepath=plot_dir, hide_singlets=True,figsize=(16,35)):
     """
@@ -1100,112 +1115,121 @@ if full_data:
     fig_size2 = (20,140) #(20,140)
 else:
     fig_size2 = (20,10)
-gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.join(plot_dir, sample_name + "_per_cell_proj_strength.svg"))
+gprcpplot = gen_per_cell_plot(df,cell_ids,motif_labels,dcounts,exp_counts,figsize=fig_size2, savepath = os.path.normpath(os.path.join(plot_dir, sample_name + "_per_cell_proj_strength.svg")))
 #
 #
 
-def show_perc_motifs(perc=True):
-    if perc:
-        return list(zip(dcounts / (dcounts.sum() / 100),motif_labels))
-    else:
-        return list(zip(dcounts,motif_labels))
-
-colors = ['white','red']
-'''cm = LinearSegmentedColormap.from_list(
-        'white_to_red', colors, N=100)'''
-cm = LinearSegmentedColormap.from_list(
-        'white_to_red', colors, N=100)
 
 from sklearn.preprocessing import StandardScaler
-
-###Draw the heatmap
-
-# Import re if not already done
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.cluster.hierarchy import linkage
+from scipy.spatial.distance import pdist
+import seaborn as sns
 import re
+import sys
 
-# Dynamically create order_full
+# Workaround for Windows recursion bug
+sys.setrecursionlimit(5000)
+
+### === Red-White Cluster Heatmap === ###
+print("🔍 Generating Red-White cluster heatmap...")
+
+# Dynamically build full order list
 order_full = [col for pattern in ['RSP', 'PM', 'AM', 'A', 'RL', 'AL', 'LM']
               for col in df.columns if re.match(f"{pattern}\\d*", col)]
-
-# Remove duplicates from order_full
 order_full = list(dict.fromkeys(order_full))
 
-# Debug: Print order_full
 if not order_full:
-    raise ValueError("No matching columns found for order_full.")
-print(f"Adjusted order_full: {order_full}")
+    raise ValueError("❌ No matching columns found for red-white cluster heatmap.")
 
-# Handle partial order for a subset of columns
 order_partial = ['LM', 'AL', 'RL', 'AM', 'PM']
-order_partial = [col for col in order_partial if col in df.columns]  # Ensure columns exist
+order_partial = [col for col in order_partial if col in df.columns]
 
-# Debug: Print order_partial
+print(f"Adjusted order_full: {order_full}")
 print(f"Adjusted order_partial: {order_partial}")
 
-# Subset DataFrame based on full_data flag
-if full_data:
-    df_ = df[order_full]
-else:
-    df_ = df[order_partial]
-
+df_ = df[order_full] if full_data else df[order_partial]
 print(f"Adjusted df_ columns: {df_.columns.tolist()}")
 
-# Scale data for heatmap
+# Normalize
 scaler = StandardScaler()
-df_ = pd.DataFrame(scaler.fit_transform(df_), columns=df_.columns)
+df_scaled = pd.DataFrame(
+    scaler.fit_transform(df_.astype(float)),
+    columns=df_.columns
+)
 
-# Draw heatmap
-clusterfig = sn.clustermap(
-    df_,
+# Ensure clean native float matrix
+df_scaled_np = df_scaled.to_numpy(copy=True).astype(float)
+
+# Colormap
+red_white_cm = LinearSegmentedColormap.from_list('white_to_red', ['white', 'red'], N=100)
+
+# Drop constant or all-zero rows
+df_scaled = df_scaled.loc[df_scaled.var(axis=1) > 0]
+
+# Final check before clustering
+if df_scaled.shape[0] < 2:
+    raise ValueError("❌ Too few rows remaining after variance filtering to perform clustering.")
+
+# Draw clustermap
+clusterfig = sns.clustermap(
+    df_scaled_np,
     col_cluster=False,
     metric='cosine',
     method='average',
     cbar_kws=dict(label='Projection Strength'),
-    cmap=cm,
+    cmap=red_white_cm,
     vmin=0.0,
     vmax=1.0
 )
 
-# Add title and save figure
 clusterfig.ax_heatmap.set_title(sample_name.replace('_', ' '))
 clusterfig.ax_heatmap.axes.get_yaxis().set_visible(False)
-clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.pdf"))
-clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.svg"))
-clusterfig.savefig(os.path.join(plot_dir, sample_name + "_red_white_cluster_heatmap.png"))
 
-import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
-from scipy.cluster.hierarchy import linkage
-from scipy.spatial.distance import pdist
+for ext in ['pdf', 'svg', 'png']:
+    clusterfig.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_red_white_cluster_heatmap.{ext}")))
 
+print("✅ Red-White cluster heatmap saved.")
+
+### === Han-Style Heatmap === ###
 print("🔍 Generating Han-style heatmap...")
 
-# Custom colormap (white → orange)
-han_colors = ['white', 'orange']
-han_cm = LinearSegmentedColormap.from_list('white_to_orange', han_colors, N=100)
+# Han colormap
+han_cm = LinearSegmentedColormap.from_list('white_to_orange', ['white', 'orange'], N=100)
 
-# Target area column matching (Han 2018)
+# Define Han-style targets
 han_targets = ['LM', 'AL', 'PM', 'AM', 'RL']
 han_order_full = [col for pattern in han_targets for col in df.columns if re.match(f"{pattern}\\d*", col)]
 han_order_full = list(dict.fromkeys(han_order_full))
 
 if not han_order_full:
-    raise ValueError("No matching columns found for Han-style target area pattern.")
+    raise ValueError("❌ No matching columns found for Han-style target area pattern.")
 
-# Subset
-df_han = df[han_order_full if full_data else [col for col in han_targets if col in df.columns]]
+df_han = df[han_order_full] if full_data else df[[col for col in han_targets if col in df.columns]]
 print(f"🧬 Han target columns: {df_han.columns.tolist()}")
+print("Han df shape:", df_han.shape)
 
-# Log-transform with offset and normalize
+# Log-transform and normalize
 df_han = np.log1p(df_han + 1e-3)
-df_han = df_han.div(df_han.max(axis=1), axis=0).fillna(0)
+df_han = df_han.div(df_han.max(axis=1), axis=0)
 
-# Compute row clustering
+if df_han.isnull().values.any():
+    raise ValueError("❌ NaNs found in df_han after normalization.")
+
+# Filter out zero-variance rows
+df_han = df_han.loc[df_han.var(axis=1) > 0].reset_index(drop=True)
+if df_han.shape[0] < 2:
+    raise ValueError("❌ Not enough valid rows in df_han after filtering.")
+
+# Linkage
 row_linkage = linkage(pdist(df_han, metric='euclidean'), method='ward')
 
-# Draw clustermap
+# Ensure clean native float matrix
+df_han_np = df_han.to_numpy(copy=True).astype(float)
+
+# Draw Han-style heatmap
 clusterfig_han = sns.clustermap(
-    df_han,
+    df_han_np,
     row_linkage=row_linkage,
     col_cluster=False,
     cmap=han_cm,
@@ -1214,14 +1238,14 @@ clusterfig_han = sns.clustermap(
     cbar_kws=dict(label='Projection Strength')
 )
 
-# Annotate and save
 clusterfig_han.ax_heatmap.set_title(sample_name.replace('_', ' ') + ' (Han-style)')
 clusterfig_han.ax_heatmap.axes.get_yaxis().set_visible(False)
 
 for ext in ['pdf', 'svg', 'png']:
-    clusterfig_han.savefig(os.path.join(plot_dir, f"{sample_name}_Hanstyle_cluster_heatmap.{ext}"))
+    clusterfig_han.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_Hanstyle_cluster_heatmap.{ext}")))
 
 print("✅ Han-style heatmap generated and saved.")
+
 
 def gen_prob_matrix(df : pd.DataFrame):
     data = df.to_numpy(copy=True)
@@ -1256,9 +1280,10 @@ ax.set_facecolor('#a8a8a8')
 ax = sn.heatmap(probmat.T,mask=probmat.T == 1,ax=ax,cbar_kws=dict(label='$P(B | A)$'),cmap=cm2) #can add vmax=number for scale
 ax.set_xlabel("Area A",fontsize=16)
 ax.set_ylabel("Area B",fontsize=16)
-plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.pdf"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.svg"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.png"))
+#plt.savefig(os.path.normpath(os.path.join(plot_dir, sample_name + "_blueyellow_probability_heatmap.pdf")))
+for ext in ["pdf", "svg", "png"]:
+    plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_blueyellow_probability_heatmap.{ext}")))
+
 
 def remove_zero_rows(df):
     df_ = df.fillna(0)
@@ -1419,9 +1444,8 @@ def write_motif_counts(path,counts):
     with open(path, 'w') as f:
         for item in counts:
             f.write("%s\n" % item)
-
 write_motif_counts(
-    os.path.join(plot_dir, sample_name + '_counts.txt'), 
+    os.path.normpath(os.path.join(plot_dir, f"{sample_name}_counts.txt")),
     unstruct_counts
 )
 
@@ -1429,9 +1453,7 @@ mdf = get_all_counts(df,motifs,dcounts,motif_labels)
 
 mdf.head()
 
-mdf.to_csv(os.path.join(plot_dir, sample_name + "_motif_counts.csv"))
-
-show_perc_motifs(False)
+mdf.to_csv(os.path.normpath(os.path.join(plot_dir, sample_name + "_motif_counts.csv")))
 
 def get_target_pie(df : pd.DataFrame):
     """
@@ -1457,7 +1479,7 @@ c = pd.DataFrame(c,columns=['# Cells'], index=c_row_names)
 c_np = c.to_numpy(copy=True).flatten()
 c.head()
 
-c.to_csv(os.path.join(plot_dir, sample_name + "_pie_chart_data.csv"))
+c.to_csv(os.path.normpath(os.path.join(plot_dir, sample_name + "_pie_chart_data.csv")))
 
 c_tot = c_np.sum()
 c_tot
@@ -1468,9 +1490,9 @@ glabels = ["1 target \n {:0.3}\%".format(100*c_np[0] / c_tot)]
 glabels += ["{} targets \n {:0.3}\%".format(i+2,100*j/c_tot) for (i,j) in zip(range(c_np.shape[0]-1),c_np[1:])]
 patches, texts = plt.pie(c.to_numpy().flatten(),labels=glabels)
 [txt.set_fontsize(8) for txt in texts]
-plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.pdf"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.svg"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_num_targets_pie.png"))
+#plt.savefig(os.path.normpath(os.path.join(plot_dir, sample_name + "_num_targets_pie.pdf")))
+for ext in ["pdf", "svg", "png"]:
+    plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_num_targets_pie.{ext}")))
 
 maxproj = TSNE(n_components=2,metric='cosine').fit_transform(df.to_numpy(copy=True))
 
@@ -1486,9 +1508,9 @@ plt.ylabel("tSNE Component 2",fontsize=20)
 sc = plt.scatter(maxproj[:,0],maxproj[:,1],c=tlabels) #c=maxprojclusters[1]
 cb = plt.colorbar(sc)
 cb.set_label("Maximum Projection Target",fontsize=20)
-plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.pdf"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.svg"))
-plt.savefig(os.path.join(plot_dir, sample_name + "_tsne.png"))
+for ext in ["pdf", "svg", "png"]:
+    plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_tsne.{ext}")))
+
 
 def prepare_upset_data(df):
     #mask1 = [i for (i,x) in enumerate(motif_labels) if len(x) > 1]
@@ -1556,9 +1578,8 @@ dfraw = pd.DataFrame(data=[
                            dcounts,exp_counts.astype(int), \
                           expected_sd_raw,effectsigsraw[:,0], effectsigsraw[:,1], degree, group]).T
 dfraw.columns=['Motifs','Observed','Expected', 'Expected SD','Effect Size', 'P-value', 'Degree', 'Group']
-
 dfraw.to_csv(
-    os.path.join(plot_dir, sample_name + "_upsetplot.csv"),
+    os.path.normpath(os.path.join(plot_dir, f"{sample_name}_upsetplot.csv")),
     index=False
 )
 
@@ -1625,9 +1646,8 @@ def kplot(df, size=(30,12)):
     return fig, ax
 
 fig, _ = kplot(dfdata)
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.pdf"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.svg"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot_gpt.png"))
+for ext in ["pdf", "svg", "png"]:
+    fig.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_upsetplot_gpt.{ext}")))
 
 def kplot(df, size=(30,12)):
     """
@@ -1677,9 +1697,8 @@ def kplot(df, size=(30,12)):
 
 fig,_ = kplot(dfdata)
 
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.pdf"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.svg"))
-fig.savefig(os.path.join(plot_dir, sample_name + "_upsetplot.png"))
+for ext in ["pdf", "svg", "png"]:
+    fig.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_upsetplot.{ext}")))
 
 ### === Arrow Diagram Panels f and g === ###
 import networkx as nx
@@ -1708,7 +1727,7 @@ plt.ylabel("Number of Dedicated Neurons")
 plt.title("Fig 10f: Dedicated Projection Neurons")
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig(os.path.join(plot_dir, f"{sample_name}_panel_f_dedicated.svg"), format='svg')
+plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_panel_f_dedicated.svg")), format='svg')
 plt.close()
 
 # === Panel g: Motif Significance Analysis ===
@@ -1742,7 +1761,11 @@ for i, val in enumerate(motif_stats):
     val['significant'] = rejected[i]
 
 motif_df = pd.DataFrame(motif_stats)
-motif_df.to_csv(os.path.join(plot_dir, f"{sample_name}_motif_significance.csv"), index=False)
+motif_df.to_csv(
+    os.path.normpath(os.path.join(plot_dir, f"{sample_name}_motif_significance.csv")),
+    index=False
+)
+
 
 print("\n--- Generating 2-region motif graphs ---")
 # === NetworkX for 2-region motifs ===
@@ -1784,7 +1807,7 @@ legend_elements = [
 ]
 plt.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
 plt.tight_layout()
-plt.savefig(os.path.join(plot_dir, f"{sample_name}_panel_g_broadcasting.svg"))
+plt.savefig(os.path.normpath(os.path.join(plot_dir, f"{sample_name}_panel_g_broadcasting.svg")))
 plt.close()
 
 print("\n--- Generating 3- and 4-region motif graphs ---")
@@ -1836,7 +1859,7 @@ for r in [3, 4]:
                    bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
 
         plt.tight_layout()
-        fig_path = os.path.join(plot_dir, f"{sample_name}_panel_g_{r}way_broadcasting.svg")
+        fig_path = os.path.normpath(os.path.join(plot_dir, f"{sample_name}_panel_g_{r}way_broadcasting.svg"))
         plt.savefig(fig_path, format='svg')
         plt.close()
         print(f"✅ Saved {r}-way broadcasting motif network to {fig_path}")
@@ -1845,7 +1868,7 @@ for r in [3, 4]:
 for r in [3, 4]:
     filtered = motif_df[(motif_df['size'] == r) & (motif_df['significant'])]
     if not filtered.empty:
-        txt_path = os.path.join(plot_dir, f"{sample_name}_motif_{r}way_significant.txt")
+        txt_path = os.path.normpath(os.path.join(plot_dir, f"{sample_name}_motif_{r}way_significant.txt"))
         with open(txt_path, 'w') as f:
             for _, row in filtered.iterrows():
                 f.write(f"{row['motif']}: Observed={row['observed']}, "
@@ -1888,7 +1911,10 @@ cbar = fig.colorbar(im, ax=ax, orientation='vertical')
 cbar.set_label('Normalized Projection Strength', rotation=270, labelpad=15)
 
 fig.tight_layout()
-fig.savefig(os.path.join(plot_dir, f"{sample_name}_ExtendedDataFig10_Recreation.svg"), format='svg')
+fig.savefig(
+    os.path.normpath(os.path.join(plot_dir, f"{sample_name}_ExtendedDataFig10_Recreation.svg")),
+    format='svg'
+)
 plt.close()
 
 
