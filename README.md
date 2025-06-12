@@ -4,15 +4,21 @@ MAPseq processing code based on previous works and designed to be used with the 
 Code found here is generally a work in progress until publication.
 
 ## **Before you run:**
-- All dependencies are known to work on debian based linux distributions. Mac is likely to work as well. Windows is currently untested, but if all the dependencies have windows versions things should work.
 - Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
-- A preprocessing and data aggregation script is provided to prepare a combined cohort level dataframe for analysis using the per-animal sample.nbcm.tsv files produced by the CSHL pipeline.
+- A preprocessing and data aggregation script is provided to prepare a individaul and combined cohort level dataframe for analysis using the per-animal sample.nbcm.tsv files produced by the CSHL pipeline. This script requires the user to match the nbcm header labels to their own sample labels to ensure all the data is correctly aligned when concatenated.
 - This script **process-nbcm-tsv.py** uses the aggregated_cleaned_matrix.tsv produced by the preprocessing and aggregation script (or individual sample.nbcm.tsv files from the CSHL pipeline if you do not have replicates). If you want to run a full analysis, you will need to ensure that the fastq processing parameters in the CSHL script have included: your samples, your negative control, and your injection columns in the output. Partial analysis is also possible at your discretion; there is a provided truncated "sample dataset" and associated "labels" which you can check out for guidance. You will need to check the arguments for each script if these requirements are unclear.
-- Setup a new conda environment, repos, and dependencies as shown below.
-- Run preprocessing then main analysis scripts. Some subsequent analysis scripts are provided, but are in development.
+- If you are on Windows and want to **try the GUI Wizard**, then please download the most recent **setup_wizard.exe** from the releases page. Running this will automatically install the software necessary to run all the scripts, and will create a MAPseq_Wizard.exe in the installation directory that will provide a GUI for the main **process-nbcm-tsv.py** script. You will still need to preprocess in the terminal at the moment.
+- Else, from the terminal you need to setup a new conda environment, repos, and dependencies as shown below.
+- Run preprocessing then main analysis scripts.
 <br/>
 
-## Installation
+## EXE Installation (Windows Only)
+
+1. Download the ost recent Setup_Wizard.exe from the releases page.
+
+2. Run the file and wait for it to complete the installation (Default location is the user directory).
+
+## CLI Installation
 
 1. Install mini-conda for your operating system. [mini-conda quick command line install](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)
 
@@ -49,7 +55,7 @@ cd /mapseq_processing_kimlab/
 pip install -r requirements.txt
 ```
 
-7. Run the script on your preprocess_and_aggregate.tsv on a per-group basis where the input directory contains the nbcm.tsv files from the CSHL pipeline. (new steps not yet reflected in sample datasets)
+7. Run the script on your preprocess_and_aggregate.tsv on a per-group basis where the input directory contains some number of nbcm.tsv files from the CSHL pipeline. (new steps not yet reflected in sample datasets)
 
 ```
 python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacobs/predata/adults/ -o /home/mwjacobs/git/mapseq_processing_jacobs/data/adults/
@@ -59,14 +65,6 @@ python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacob
 
 ```
 python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
-```
-
-9. Run any additional analysis scripts on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from step 7.) These are typically analysis that are under development and not integrated into the main workflow.
-
-```
-python cluster_fig.py (see arguments for input, output, k-clusters, sort_labels, output_name)
-python arrow_diagrams.py (see arguments for input, output, output_prefix)
-
 ```
 
 <br/>
