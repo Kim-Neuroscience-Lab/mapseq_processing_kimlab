@@ -174,11 +174,8 @@ def normalize_rows(matrix):
         return matrix
 
     return np.apply_along_axis(lambda x: x / np.amax(x) if np.amax(x) > 0 else x, axis=1, arr=matrix)
-
 def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
                      apply_outlier_filtering=False, force_user_threshold=False):
-
-
     """
     Clean and filter the matrix:
     - Remove header row and barcode column
@@ -207,19 +204,13 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
     # 🚨 Step 3: Remove rows where any value >= the corresponding 'inj' column value
     if "inj" in sample_labels:
         inj_col_idx = sample_labels.index("inj")
-        inj_values = matrix[:, inj_col_idx]  # Extract the 'inj' column values
-        
-        # Debugging information for 'inj' values
+        inj_values = matrix[:, inj_col_idx]
         print(f"🔍 Step 3: 'inj' column detected at index {inj_col_idx}")
         print(f"🔍 Step 3: Injection Site values = min: {np.min(inj_values)}, max: {np.max(inj_values)}, mean: {np.mean(inj_values)}")
-        
-        # Perform row-wise comparison excluding the 'inj' column itself
         mask = (
-            np.all(matrix[:, :inj_col_idx] < inj_values[:, None], axis=1) &  # Check values before 'inj' column
-            np.all(matrix[:, inj_col_idx + 1:] < inj_values[:, None], axis=1)  # Check values after 'inj' column
+            np.all(matrix[:, :inj_col_idx] < inj_values[:, None], axis=1) &
+            np.all(matrix[:, inj_col_idx + 1:] < inj_values[:, None], axis=1)
         )
-        
-        # Apply the mask to filter rows
         matrix = matrix[mask]
         print(f"🔍 Step 3: Removed rows with values >= 'inj'. Shape: {matrix.shape}")
     else:
@@ -232,7 +223,7 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
         print(f"✅ CHECK THIS Step 3b: Removed rows with 'inj' < {injection_umi_min}. Shape: {matrix.shape}")
     else:
         print("⚠ WARNING: 'inj' column not found. Skipping Step 3b.")
-    
+
     # 🚨 Step 3c: Remove rows where inj < (max target value * ratio threshold)
     if "inj" in sample_labels:
         inj_col_idx = sample_labels.index("inj")
@@ -250,43 +241,34 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
     else:
         print("⚠ WARNING: 'inj' column not found. Skipping Step 3c.")
 
-	
     # 🚨 Step 4: Extract max value from 'neg' column **before removing rows with neg > 0**
     neg_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower()]
-    
     if neg_columns:
-        neg_values = matrix[:, neg_columns]  # Extract 'neg' values
-        neg_values = neg_values[~np.isnan(neg_values)]  # Remove NaNs
-        
+        neg_values = matrix[:, neg_columns]
+        neg_values = neg_values[~np.isnan(neg_values)]
         if neg_values.size > 0:
-            max_neg_value = np.max(neg_values)  # Get max value safely
+            max_neg_value = np.max(neg_values)
         else:
-            max_neg_value = target_umi_min  # Fallback if no valid neg values
+            max_neg_value = target_umi_min
             print("⚠ WARNING: 'neg' column contains only NaN values. Using argparse default.")
-
         print(f"🚨 Stored max value from 'neg' column: {max_neg_value}")
     else:
-        max_neg_value = target_umi_min  # Default if no neg column exists
+        max_neg_value = target_umi_min
         print("⚠ WARNING: 'neg' column not found. Using argparse default UMI threshold.")
 
-    
     # 🚨 Step 5: Remove rows where any 'neg' column has a nonzero value
     neg_columns = [i for i, label in enumerate(sample_labels) if "neg" in label.lower()]
     if neg_columns:
         matrix = matrix[np.all(matrix[:, neg_columns] == 0, axis=1)]
     print(f"🔍 Step 5: Removed rows with 'neg' > 0. Shape: {matrix.shape}")
-    
-	# 🚨 Step 6a: Dynamically calculate the noise threshold value using histogram elbow
+
+    # 🚨 Step 6a: Dynamically calculate the noise threshold value using histogram elbow
     non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
     if non_neg_inj_cols:
-        # Flatten all non-zero values across target regions
         all_target_vals = matrix[:, non_neg_inj_cols].flatten()
         non_zero_target_vals = all_target_vals[all_target_vals > 0]
-
         if non_zero_target_vals.size > 0:
             from scipy.stats import gaussian_kde
-            import numpy as np
-
             log_vals = np.log10(non_zero_target_vals + 1e-5)
             density = gaussian_kde(log_vals)
             xs = np.linspace(log_vals.min(), log_vals.max(), 1000)
@@ -294,26 +276,27 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
             d2 = np.gradient(np.gradient(ys))
             elbow_idx = np.argmin(d2)
             elbow_log_value = xs[elbow_idx]
-            dynamic_threshold = 10**elbow_log_value
+            dynamic_threshold = 10 ** elbow_log_value
             print(f"🔍 Step 6a: Dynamic noise threshold estimated via elbow method: {dynamic_threshold:.4f}")
         else:
-            dynamic_threshold = target_umi_min  # fallback
+            dynamic_threshold = target_umi_min
             print("⚠ WARNING: No nonzero target values found for threshold estimation. Using user defined or argparse default value.")
     else:
         dynamic_threshold = target_umi_min
         print("⚠ WARNING: No target columns found for dynamic thresholding. Using user defined or argparse default value.")
-		print("Calculated Threshold: {dynamic_threshold}")
-		print("User defined or argparse minimum default(2): {target_umi_min}")
-		print("Max Negative Control Value: {max_neg_value}")
-		
+
+    print(f"Calculated Threshold: {dynamic_threshold}")
+    print(f"User defined or argparse minimum default(2): {target_umi_min}")
+    print(f"Max Negative Control Value: {max_neg_value}")
+
     # 🚨 Step 6b: Apply UMI threshold
     if force_user_threshold:
         final_umi_threshold = target_umi_min
         print(f"⚠️ Step 6b: Forcing user-defined UMI threshold: {final_umi_threshold}")
     else:
         final_umi_threshold = max(target_umi_min, max_neg_value, dynamic_threshold)
-        print(f"✅ Step 6b: Using max of user ({target_umi_min}), neg ({max_neg_value:.4f}), "
-              f"and dynamic ({dynamic_threshold:.4f}) ➜ Final threshold: {final_umi_threshold:.4f}")
+        print(f"✅ Step 6b: Looking for the maximum value: user= ({target_umi_min}), MAXneg= ({max_neg_value:.4f}), "
+              f"and dynamic= ({dynamic_threshold:.4f}) ➜ Final threshold choice: {final_umi_threshold:.4f}")
 
     # 🚨 Step 6c: Remove rows that became all zeros after thresholding
     matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
@@ -326,13 +309,10 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
             mean_values = np.mean(matrix[:, non_neg_inj_cols], axis=0)
             std_values = np.std(matrix[:, non_neg_inj_cols], axis=0)
             upper_threshold = mean_values + 2 * std_values
-
-            # Keep rows where all values in the subset are below the threshold
             filtered_matrix = []
             for row in matrix:
                 if all(row[i] <= upper_threshold[idx] for idx, i in enumerate(non_neg_inj_cols)):
                     filtered_matrix.append(row)
-
             matrix = np.array(filtered_matrix)
         print(f"✅ CHECK THIS Step 7: Removed high-UMI outliers where value was > (mean+2*StdDev). Shape: {matrix.shape}")
 
