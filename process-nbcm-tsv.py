@@ -61,6 +61,12 @@ parser.add_argument(
     action="store_true", 
     help="Enable outlier filtering (Step 7) using mean + 2*std deviation."
 )
+parser.add_argument(
+    "--force_user_threshold",
+    action="store_true",
+    help="If set, override all automatic thresholding and use the user-defined target_umi_min."
+)
+
 
 
 
@@ -169,7 +175,9 @@ def normalize_rows(matrix):
 
     return np.apply_along_axis(lambda x: x / np.amax(x) if np.amax(x) > 0 else x, axis=1, arr=matrix)
 
-def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, apply_outlier_filtering=False):
+def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min,
+                     apply_outlier_filtering=False, force_user_threshold=False):
+
 
     """
     Clean and filter the matrix:
@@ -268,15 +276,48 @@ def clean_and_filter(matrix, sample_labels, target_umi_min, injection_umi_min, a
         matrix = matrix[np.all(matrix[:, neg_columns] == 0, axis=1)]
     print(f"🔍 Step 5: Removed rows with 'neg' > 0. Shape: {matrix.shape}")
     
-    # 🚨 Step 6: Apply UMI threshold
-    final_umi_threshold = max(target_umi_min, max_neg_value) #picks the bigger value. Either the user defined target_umi_min or the highest value in the neg column from step 4.
-    matrix[matrix < final_umi_threshold] = 0
-    num_zero_after_threshold = np.sum(np.sum(matrix > 0, axis=1) == 0)
-    print(f"✅ CHECK THIS Step 6: Applied threshold ({target_umi_min}). New zero rows: {num_zero_after_threshold}")
+	# 🚨 Step 6a: Dynamically calculate the noise threshold value using histogram elbow
+    non_neg_inj_cols = [i for i, label in enumerate(sample_labels) if label not in ["neg", "inj"]]
+    if non_neg_inj_cols:
+        # Flatten all non-zero values across target regions
+        all_target_vals = matrix[:, non_neg_inj_cols].flatten()
+        non_zero_target_vals = all_target_vals[all_target_vals > 0]
 
-    # 🚨 Step 6b: Remove rows that became all zeros after thresholding
+        if non_zero_target_vals.size > 0:
+            from scipy.stats import gaussian_kde
+            import numpy as np
+
+            log_vals = np.log10(non_zero_target_vals + 1e-5)
+            density = gaussian_kde(log_vals)
+            xs = np.linspace(log_vals.min(), log_vals.max(), 1000)
+            ys = density(xs)
+            d2 = np.gradient(np.gradient(ys))
+            elbow_idx = np.argmin(d2)
+            elbow_log_value = xs[elbow_idx]
+            dynamic_threshold = 10**elbow_log_value
+            print(f"🔍 Step 6a: Dynamic noise threshold estimated via elbow method: {dynamic_threshold:.4f}")
+        else:
+            dynamic_threshold = target_umi_min  # fallback
+            print("⚠ WARNING: No nonzero target values found for threshold estimation. Using user defined or argparse default value.")
+    else:
+        dynamic_threshold = target_umi_min
+        print("⚠ WARNING: No target columns found for dynamic thresholding. Using user defined or argparse default value.")
+		print("Calculated Threshold: {dynamic_threshold}")
+		print("User defined or argparse minimum default(2): {target_umi_min}")
+		print("Max Negative Control Value: {max_neg_value}")
+		
+    # 🚨 Step 6b: Apply UMI threshold
+    if force_user_threshold:
+        final_umi_threshold = target_umi_min
+        print(f"⚠️ Step 6b: Forcing user-defined UMI threshold: {final_umi_threshold}")
+    else:
+        final_umi_threshold = max(target_umi_min, max_neg_value, dynamic_threshold)
+        print(f"✅ Step 6b: Using max of user ({target_umi_min}), neg ({max_neg_value:.4f}), "
+              f"and dynamic ({dynamic_threshold:.4f}) ➜ Final threshold: {final_umi_threshold:.4f}")
+
+    # 🚨 Step 6c: Remove rows that became all zeros after thresholding
     matrix = matrix[np.sum(matrix > 0, axis=1) > 0]
-    print(f"🔍 Step 6b: Removed new zero rows. Shape: {matrix.shape}")
+    print(f"🔍 Step 6c: Removed new zero rows. Shape: {matrix.shape}")
 
     # 🚨 Step 7: Apply optional high-UMI outlier filtering
     if apply_outlier_filtering:
@@ -338,9 +379,19 @@ print(f"🔍 BEFORE ANY FILTERING: Neurons with Zero Projections: {num_zero_befo
 apply_outlier_filtering = args.apply_outlier_filtering  # Get argument value
 
 filtered_matrix, max_neg_value, final_umi_threshold = clean_and_filter(
-    barcodematrix, sample_labels, target_umi_min, args.injection_umi_min, args.apply_outlier_filtering
+    barcodematrix,
+    sample_labels,
+    target_umi_min,
+    args.injection_umi_min,
+    args.apply_outlier_filtering,
+    force_user_threshold=args.force_user_threshold
 )
-print(f"✅ CHECK THIS: Final UMI Threshold Used (Defaults to Negative Control Max unless user defined): {final_umi_threshold}")
+
+if args.force_user_threshold:
+    print(f"⚠️ User-forced threshold in effect: {final_umi_threshold}")
+else:
+    print(f"✅ CHECK THIS: Final UMI Threshold Used (max of user, neg, dynamic): {final_umi_threshold:.4f}")
+
 print("🔍 Filtered Matrix Shape:", filtered_matrix.shape)
 
 # Drop "neg" and "inj" columns from the filtered matrix
