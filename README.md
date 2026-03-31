@@ -18,7 +18,7 @@ Code found here is generally a work in progress until publication.
 
 1. Download and [install Git](https://gitforwindows.org/) if not already installed. 
   
-2. Download the most recent Setup_Wizard.exe from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases).
+2. Download the most recent Setup_Wizard.exe from the [releases page](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases).
 
 3. Run the file and wait for it to complete the installation (Default location is the user directory).
 
