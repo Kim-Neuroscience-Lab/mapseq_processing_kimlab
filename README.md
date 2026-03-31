@@ -3,7 +3,7 @@ MAPseq processing code based on previous works and designed to be used with the 
 
 Code found here is generally a work in progress until publication.
 
-[![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Fmatsojr22%2Fmapseq_processing_Jacobs%2Flines)](https://tokei.kojix2.net/github/matsojr22/mapseq_processing_Jacobs)
+[![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Fmatsojr22%2Fmapseq_processing_kimlab%2Flines)](https://tokei.kojix2.net/github/matsojr22/mapseq_processing_kimlab)
 
 ## **Before you run:**
 - Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
@@ -14,7 +14,7 @@ Code found here is generally a work in progress until publication.
 - Run preprocessing then main analysis scripts.
 <br/>
 
-## EXE Installation (Windows Only)
+## Experimental EXE Installation (Windows Only)
 
 1. Download and [install Git](https://gitforwindows.org/) if not already installed. 
   
@@ -22,7 +22,7 @@ Code found here is generally a work in progress until publication.
 
 3. Run the file and wait for it to complete the installation (Default location is the user directory).
 
-## CLI Installation
+## CLI Installation (Default usage for large projects)
 
 1. Install mini-conda for your operating system. [mini-conda quick command line install](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)
 
@@ -49,19 +49,26 @@ conda config --add channels bioconda
 
 ```
 cd /home/your_user/git/
-git clone https://github.com/matsojr22/mapseq_processing_Jacobs.git
+git clone https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git
 ```
 
 6. Browse into the project directory and install dependencies
 
 ```
-cd /mapseq_processing_Jacobs/
+cd /mapseq_processing_kimlab/
 pip install -r requirements.txt
 ```
 
+**Usage:**
+Examine the all_commands.txt file in bash and alter all file paths and desired sript arguments to suit your needs. The default is prepared for replicating the data found in Jacobs et al. 2026. Once your all_commands.txt is prepared, place a copy in the root directory of the project.
+
+```bash
+chmod +x run_commands.sh
+./run_commands.sh
+```
 ---
 
-## GUI Tools
+## GUI Tools (Useful for getting started with your initial datasets)
 
 ### MAPseq_Wizard.py
 
@@ -100,7 +107,7 @@ python setup_wizard.py
 ```
 
 **Windows Executable:**
-For Windows users who prefer not to use Python directly, download `Setup_Wizard.exe` from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases). This executable:
+For Windows users who prefer not to use Python directly, download `Setup_Wizard.exe` from the [releases page](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab). This executable:
 - Installs all necessary dependencies
 - Creates the conda environment
 - Downloads and sets up the GUI executable
@@ -113,13 +120,13 @@ For Windows users who prefer not to use Python directly, download `Setup_Wizard.
 7. Run the preprocessing script to clean and aggregate your replicate TSV files (see Preprocessing Scripts section below for details)
 
 ```
-python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacobs/predata/adults/ -o /home/mwjacobs/git/mapseq_processing_jacobs/data/adults/
+python preprocess_and_aggregate.py -i ~/git/mapseq_processing_kimlab/predata/adults/ -o ~/git/mapseq_processing_kimlab/data/adults/
 ```
 
 8. Run the main analysis script on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from the prior step)
 
 ```
-python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+python process-nbcm-tsv.py -o ~/git/mapseq_processing_kimlab/jr0375_out/ -s JR0375 -d ~/git/mapseq_processing_kimlab/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
 ```
 
 <br/>
