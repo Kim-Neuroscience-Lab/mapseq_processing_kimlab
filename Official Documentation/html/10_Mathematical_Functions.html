@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 10: Mathematical Functions Reference</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-10-mathematical-functions-reference">Chapter 10: Mathematical Functions Reference</h1>
+<h2 id="overview">Overview</h2>
+<p>This chapter provides a comprehensive reference for all mathematical formulas used in the MAPseq processing pipeline, with code implementation references and interpretations.</p>
+<h2 id="population-estimation">Population Estimation</h2>
+<h3 id="n0-estimation-formula">N₀ Estimation Formula</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$\pi = 1 - \prod_{k=0}^{m}\left(1 - \frac{s_k}{N_0}\right)$$</p>
+<p>$$\pi \cdot N_0 = N_{obs}$$</p>
+<p>Where:<br />
+- $\pi$ = detection probability<br />
+- $s_k$ = number of neurons projecting to region k<br />
+- $N_0$ = true (latent) population size<br />
+- $N_{obs}$ = observed neurons (project to ≥1 region)<br />
+- $m$ = number of regions</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="n">pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Product</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="n">N0</span><span class="p">)),</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span><span class="o">.</span><span class="n">doit</span><span class="p">())</span>
+<span class="n">soln</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">pi</span> <span class="o">*</span> <span class="n">N0</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>: Uses inclusion-exclusion principle to estimate true population accounting for neurons projecting only to unsampled regions.</p>
+<p><strong>Assumptions</strong>: Projections to different regions are statistically independent.</p>
+<h2 id="uniform-edge-probability-model">Uniform Edge Probability Model</h2>
+<h3 id="pe-calculation">pₑ Calculation</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(\text{detected}) = 1 - (1 - p_e)^n$$</p>
+<p>$$\left(1 - (1-p_e)^n\right) \cdot N_0 = N_{obs}$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (uniform pₑ)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pe_solutions</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe</span><span class="p">)</span><span class="o">**</span><span class="nb">len</span><span class="p">(</span><span class="n">projections</span><span class="p">))</span> <span class="o">*</span> <span class="n">N0_value</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">,</span> <span class="n">pe</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>: Solves for uniform edge probability pₑ assuming all regions equally likely.</p>
+<h3 id="motif-probability-uniform">Motif Probability (Uniform)</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(k \text{ regions}) = p_e^k \cdot (1-p_e)^{(R-k)}$$</p>
+<p>Where:<br />
+- $k$ = number of regions in motif<br />
+- $R$ = total number of regions</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (uniform model)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">motif_probs_uniform</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">n</span><span class="p">:</span> <span class="p">(</span><span class="n">pe_num</span> <span class="o">**</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe_num</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">total_regions</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">total_regions</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="region-specific-probability-model">Region-Specific Probability Model</h2>
+<h3 id="region-probability">Region Probability</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$p_i = \frac{N_i}{N_0}$$</p>
+<p>Where:<br />
+- $N_i$ = number of neurons projecting to region i<br />
+- $N_0$ = estimated total population</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (region probabilities)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">psdict_region_specific</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">region</span><span class="p">:</span> <span class="p">(</span><span class="n">count</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">N0_value</span><span class="p">))</span> 
+    <span class="k">for</span> <span class="n">region</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">projections</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="motif-probability-region-specific">Motif Probability (Region-Specific)</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(\text{motif } M) = \prod_{i \in M} p_i \cdot \prod_{j \notin M} (1 - p_j)$$</p>
+<p>Where:<br />
+- $M$ = set of regions in motif<br />
+- $p_i$ = probability of projecting to region i</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_region_specific()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">region_names</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">motif_regions</span><span class="p">:</span>
+        <span class="n">prob</span> <span class="o">*=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># p_i</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">prob</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>  <span class="c1"># (1 - p_i)</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>: Treats each region's projection as independent Bernoulli trial.</p>
+<h2 id="correlated-binomial-model">Correlated Binomial Model</h2>
+<h3 id="conditional-probability">Conditional Probability</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(B|A) = \frac{\text{neurons projecting to both A and B}}{\text{neurons projecting to A}}$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::gen_prob_matrix()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="n">prob</span> <span class="o">=</span> <span class="n">ids_row</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">ids_col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># P(B|A)</span>
+</code></pre></div>
+
+<h3 id="motif-probability-correlated">Motif Probability (Correlated)</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(A, B, C, ...) = P(A) \cdot P(B|A) \cdot P(C|B) \cdot ...$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_correlated()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="n">prob</span> <span class="o">=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># P(A)</span>
+<span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">)):</span>
+    <span class="n">prev_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">curr_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+    <span class="n">cond_prob</span> <span class="o">=</span> <span class="n">cond_prob_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prev_region</span><span class="p">,</span> <span class="n">curr_region</span><span class="p">]</span>  <span class="c1"># P(B|A)</span>
+    <span class="n">prob</span> <span class="o">*=</span> <span class="n">cond_prob</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>: Uses chain rule of probability with pairwise conditional probabilities.</p>
+<h2 id="effect-size">Effect Size</h2>
+<h3 id="effect-size-formula">Effect Size Formula</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (effect size)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">effect_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">((</span><span class="n">observed</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">expected</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>:<br />
+- Effect Size &gt; 0: Over-represented<br />
+- Effect Size &lt; 0: Under-represented<br />
+- Effect Size ≈ 0: Matches expectation</p>
+<p><strong>Pseudocount</strong>: +1 prevents division by zero and log of zero.</p>
+<h2 id="statistical-tests">Statistical Tests</h2>
+<h3 id="binomial-test">Binomial Test</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>Two-tailed binomial test:<br />
+- <strong>n</strong> = N₀ (estimated population)<br />
+- <strong>k</strong> = observed count<br />
+- <strong>p</strong> = P(motif) from model</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (binomtest)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">p_value</span> <span class="o">=</span> <span class="n">binomtest</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">observed</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">N0_value</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="mf">1e-10</span><span class="p">))</span><span class="o">.</span><span class="n">pvalue</span>
+</code></pre></div>
+
+<h3 id="bonferroni-correction">Bonferroni Correction</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$\alpha_{corrected} = \frac{\alpha}{n_{motifs}}$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (significance grouping)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">bonferroni_thr</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="entropy-calculation">Entropy Calculation</h2>
+<h3 id="normalized-entropy">Normalized Entropy</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$H_{norm} = \frac{H}{H_{max}} = \frac{-\sum p_i \log p_i}{\log n}$$</p>
+<p>Where:<br />
+- $p_i$ = probability of region i<br />
+- $n$ = number of regions<br />
+- $H_{max} = \log n$ (entropy of uniform distribution)</p>
+<p><strong>Code Implementation</strong>: Based on <code>docs/Entropy Calculation Notes.txt</code></p>
+<div class="codehilite"><pre><span></span><code><span class="n">probs</span> <span class="o">=</span> <span class="n">counts</span> <span class="o">/</span> <span class="n">counts</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">norm_entropy</span> <span class="o">=</span> <span class="n">entropy</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">probs</span><span class="p">))</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>:<br />
+- 0.0: All projections to one region (highly focused)<br />
+- 1.0: Evenly distributed across all regions (highly distributed)<br />
+- 0.2-0.5: Moderate focus</p>
+<h2 id="helper-script-formulas">Helper Script Formulas</h2>
+<h3 id="kruskal-wallis-test">Kruskal-Wallis Test</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$H = \frac{12}{N(N+1)}\sum_{i=1}^{k}\frac{R_i^2}{n_i} - 3(N+1)$$</p>
+<p>Where:<br />
+- $N$ = total number of observations<br />
+- $k$ = number of groups<br />
+- $R_i$ = sum of ranks in group i<br />
+- $n_i$ = number of observations in group i</p>
+<p><strong>Code Implementation</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">kruskal</span>
+<span class="n">h_stat</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">kruskal</span><span class="p">(</span><span class="o">*</span><span class="n">valid_groups</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="fishers-exact-test">Fisher's Exact Test</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>For 2×2 contingency table:<br />
+$$\begin{bmatrix} a &amp; b \ c &amp; d \end{bmatrix}$$</p>
+<p>$$p = \frac{\binom{a+b}{a}\binom{c+d}{c}}{\binom{n}{a+c}} = \frac{(a+b)!(c+d)!(a+c)!(b+d)!}{a!b!c!d!n!}$$</p>
+<p><strong>Code Implementation</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">fisher_exact</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">fisher_exact</span><span class="p">([[</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">],</span> <span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">]])</span>
+</code></pre></div>
+
+<h3 id="jensen-shannon-divergence">Jensen-Shannon Divergence</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$JSD(P||Q) = \frac{1}{2}D_{KL}(P||M) + \frac{1}{2}D_{KL}(Q||M)$$</p>
+<p>Where:<br />
+- $M = \frac{1}{2}(P + Q)$ (mixture distribution)<br />
+- $D_{KL}$ = Kullback-Leibler divergence</p>
+<p><strong>Range</strong>: 0 (identical) to 1 (maximally different)</p>
+<p><strong>Code Implementation</strong>: Uses <code>scipy.spatial.distance.jensenshannon</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.distance</span><span class="w"> </span><span class="kn">import</span> <span class="n">jensenshannon</span>
+<span class="n">js_div</span> <span class="o">=</span> <span class="n">jensenshannon</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+</code></pre></div>
+
+<p><strong>Interpretation</strong>:<br />
+- JSD &lt; 0.05: Very similar (stable)<br />
+- JSD 0.05-0.2: Moderate difference<br />
+- JSD &gt; 0.2: Large difference (unstable)</p>
+<h3 id="welchs-t-test">Welch's t-test</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$t = \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}$$</p>
+<p>Where:<br />
+- $\bar{X}_i$ = sample mean<br />
+- $s_i$ = sample standard deviation<br />
+- $n_i$ = sample size</p>
+<p><strong>Code Implementation</strong>: <code>helpers/scripts/05_motif_analysis.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">ttest_ind</span>
+<span class="n">t_stat</span><span class="p">,</span> <span class="n">t_p</span> <span class="o">=</span> <span class="n">ttest_ind</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">,</span> <span class="n">equal_var</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="kolmogorov-smirnov-test">Kolmogorov-Smirnov Test</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$D_{n,m} = \sup_x |F_{1,n}(x) - F_{2,m}(x)|$$</p>
+<p>Where:<br />
+- $F_{1,n}$ = empirical CDF of sample 1<br />
+- $F_{2,m}$ = empirical CDF of sample 2</p>
+<p><strong>Code Implementation</strong>: <code>helpers/scripts/05_motif_analysis.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">ks_2samp</span>
+<span class="n">ks_stat</span><span class="p">,</span> <span class="n">ks_p</span> <span class="o">=</span> <span class="n">ks_2samp</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="anchor-model-system">Anchor Model System</h2>
+<h3 id="expected-count-calculation">Expected Count Calculation</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$Expected_{motif} = P_{P60}(motif) \times N_0^{local}$$</p>
+<p>Where:<br />
+- $P_{P60}(motif)$ = probability from P60 anchor model<br />
+- $N_0^{local}$ = local population estimate</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (expected count with anchor)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">psdict_for_expected</span> <span class="o">=</span> <span class="n">anchor_probs_loaded</span> <span class="k">if</span> <span class="n">anchor_probs_loaded</span> <span class="k">else</span> <span class="n">psdict_region_specific</span>
+<span class="n">exp_counts</span> <span class="o">=</span> <span class="n">n0</span> <span class="o">*</span> <span class="n">motif_probs_array</span>
+</code></pre></div>
+
+<h2 id="additional-model-formulas">Additional Model Formulas</h2>
+<h3 id="smoothed-empirical">Smoothed Empirical</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>$$P(motif) = \frac{observed_count(motif) + \alpha}{N0_P60 + \alpha \times total_motifs}$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_smoothed_empirical()</code></p>
+<h3 id="maximum-entropy">Maximum Entropy</h3>
+<p><strong>Mathematical Formulation</strong>:</p>
+<p>Maximize: $H = -\sum P(motif) \times \log P(motif)$</p>
+<p>Subject to:<br />
+- $\sum P(motif) = 1$ (normalization)<br />
+- $\sum P(motif) \times I(region_i \in motif) = p_i$ (marginals)<br />
+- $\sum P(motif) \times I(region_i, region_j \in motif) = p_{ij}$ (pairwise correlations)</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_max_entropy()</code></p>
+<h2 id="mathematical-notation-glossary">Mathematical Notation Glossary</h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$N_0$</td>
+<td>True (latent) neuron population size</td>
+</tr>
+<tr>
+<td>$N_{obs}$</td>
+<td>Observed neurons (project to ≥1 region)</td>
+</tr>
+<tr>
+<td>$n$</td>
+<td>Number of target brain regions</td>
+</tr>
+<tr>
+<td>$s_k$</td>
+<td>Neurons projecting to region k</td>
+</tr>
+<tr>
+<td>$\pi$</td>
+<td>Detection probability</td>
+</tr>
+<tr>
+<td>$p_e$</td>
+<td>Uniform edge probability (Model 1)</td>
+</tr>
+<tr>
+<td>$p_i$</td>
+<td>Region-specific probability (Model 2)</td>
+</tr>
+<tr>
+<td>$P(B|A)$</td>
+<td>Conditional probability: B given A (Model 3)</td>
+</tr>
+<tr>
+<td>$H$</td>
+<td>Entropy</td>
+</tr>
+<tr>
+<td>$JSD$</td>
+<td>Jensen-Shannon Divergence</td>
+</tr>
+<tr>
+<td>$\alpha$</td>
+<td>Significance threshold</td>
+</tr>
+<tr>
+<td>$\alpha_{corrected}$</td>
+<td>Bonferroni-corrected threshold</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>For code implementations, see <a href="09_Code_Review.html">Chapter 9: Code Review</a>. For statistical methods, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

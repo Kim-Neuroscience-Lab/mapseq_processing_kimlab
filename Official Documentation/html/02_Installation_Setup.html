@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 2: Installation and Setup</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-2-installation-and-setup">Chapter 2: Installation and Setup</h1>
+<h2 id="system-requirements">System Requirements</h2>
+<h3 id="operating-system">Operating System</h3>
+<p>The MAPseq processing pipeline supports:<br />
+- <strong>Linux</strong> (tested on Ubuntu 20.04+)<br />
+- <strong>macOS</strong> (tested on macOS 10.15+)<br />
+- <strong>Windows</strong> (via WSL; for an experimental GUI installer see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>)</p>
+<h3 id="software-dependencies">Software Dependencies</h3>
+<ul>
+<li><strong>Python 3.9</strong> (required)</li>
+<li><strong>Conda</strong> (Miniconda or Anaconda) for environment management</li>
+<li><strong>Git</strong> (for cloning the repository)</li>
+</ul>
+<h3 id="hardware-requirements">Hardware Requirements</h3>
+<ul>
+<li><strong>RAM</strong>: Minimum 8 GB, recommended 16 GB for large datasets</li>
+<li><strong>Storage</strong>: ~2 GB for installation, additional space for output files</li>
+<li><strong>CPU</strong>: Multi-core recommended for parallel processing</li>
+</ul>
+<h2 id="installation-methods">Installation Methods</h2>
+<p>Use the following steps on all platforms (Linux, macOS, Windows with WSL). Windows users looking for an experimental GUI installer can see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>.</p>
+<h3 id="command-line-installation">Command-Line Installation</h3>
+<h4 id="step-1-install-miniconda">Step 1: Install Miniconda</h4>
+<p>Download and install Miniconda for your operating system:<br />
+- <a href="https://docs.anaconda.com/miniconda/install/#quick-command-line-install">Miniconda quick command-line install</a></p>
+<h4 id="step-2-create-conda-environment">Step 2: Create Conda Environment</h4>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>mapseq_processing<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.9<span class="w"> </span>pip
+</code></pre></div>
+
+<h4 id="step-3-activate-environment">Step 3: Activate Environment</h4>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
+</code></pre></div>
+
+<h4 id="step-4-configure-conda-channels">Step 4: Configure Conda Channels</h4>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>config<span class="w"> </span>--add<span class="w"> </span>channels<span class="w"> </span>conda-forge
+conda<span class="w"> </span>config<span class="w"> </span>--add<span class="w"> </span>channels<span class="w"> </span>bioconda
+</code></pre></div>
+
+<h4 id="step-5-clone-repository">Step 5: Clone Repository</h4>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/git/directory
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matsojr22/mapseq_processing_Jacobs.git
+<span class="nb">cd</span><span class="w"> </span>mapseq_processing_Jacobs
+</code></pre></div>
+
+<h4 id="step-6-install-dependencies">Step 6: Install Dependencies</h4>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</code></pre></div>
+
+<h2 id="verification">Verification</h2>
+<p>After installation, verify the setup:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Activate environment</span>
+conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
+
+<span class="c1"># Test script execution</span>
+python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>--help
+</code></pre></div>
+
+<h2 id="running-the-pipeline-recommended">Running the Pipeline (Recommended)</h2>
+<p>The primary way to run the pipeline is via the bash script and a command file:</p>
+<ol>
+<li><strong>Edit the command file</strong>: Copy or edit <code>all_commands.txt</code> (or use <code>all_commands_all-parameters.txt</code>) so paths and sample names match your project. The file contains one command per line (main processing and helper scripts).</li>
+<li><strong>Run the script</strong>: From the repository root, make the script executable once (if needed), then run it:<br />
+<code>bash
+   chmod +x run_commands.sh
+   ./run_commands.sh</code><br />
+   If you use the copy in <code>bash/</code>, run <code>chmod +x bash/run_commands.sh</code> and then <code>./bash/run_commands.sh</code>. The script reads the command file line by line, executes each command in order, and logs output to a timestamped file named <code>processing_YYYYMMDD_HHMMSS.log</code>. The script continues even if individual commands fail; check the log file to identify any failures.</li>
+<li><strong>Review output</strong>: Results are written to the output directories specified in the command file.</li>
+</ol>
+<p>For experimental GUI options, see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>.</p>
+<h2 id="command-line-interface">Command-Line Interface</h2>
+<p><strong>Advantages:</strong><br />
+- Full control over all parameters<br />
+- Scriptable and automatable<br />
+- Better for batch processing<br />
+- Easier integration with workflows</p>
+<p><strong>Usage:</strong></p>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>-o<span class="w"> </span>output_dir<span class="w"> </span>-s<span class="w"> </span>sample_name<span class="w"> </span>-d<span class="w"> </span>data_file.tsv<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span>
+</code></pre></div>
+
+<p><strong>See</strong>: <a href="04_Main_Processing_Pipeline.html">Chapter 4: Main Processing Pipeline</a> for detailed CLI usage.</p>
+<h2 id="dependencies">Dependencies</h2>
+<h3 id="core-dependencies">Core Dependencies</h3>
+<p>Key packages required for the pipeline:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>numpy</code></td>
+<td>Numerical computations</td>
+</tr>
+<tr>
+<td><code>pandas</code></td>
+<td>Data manipulation</td>
+</tr>
+<tr>
+<td><code>scipy</code></td>
+<td>Statistical functions</td>
+</tr>
+<tr>
+<td><code>sympy</code></td>
+<td>Symbolic mathematics (N₀ estimation)</td>
+</tr>
+<tr>
+<td><code>matplotlib</code></td>
+<td>Plotting and visualization</td>
+</tr>
+<tr>
+<td><code>seaborn</code></td>
+<td>Statistical visualization</td>
+</tr>
+<tr>
+<td><code>scikit-learn</code></td>
+<td>Machine learning (clustering, PCA)</td>
+</tr>
+<tr>
+<td><code>upsetplot</code></td>
+<td>Set visualization</td>
+</tr>
+<tr>
+<td><code>markdown</code></td>
+<td>Documentation generation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="optional-dependencies">Optional Dependencies</h3>
+<p>See <code>requirements.txt</code> for the complete list. For optional dependencies used by experimental GUI tools, see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>.</p>
+<h2 id="environment-management">Environment Management</h2>
+<h3 id="activating-environment">Activating Environment</h3>
+<p>Always activate the conda environment before running scripts:</p>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
+</code></pre></div>
+
+<h3 id="deactivating-environment">Deactivating Environment</h3>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>deactivate
+</code></pre></div>
+
+<h3 id="updating-dependencies">Updating Dependencies</h3>
+<p>To update packages:</p>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
+pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+</code></pre></div>
+
+<h3 id="removing-environment">Removing Environment</h3>
+<p>If you need to start fresh:</p>
+<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>deactivate
+conda<span class="w"> </span>env<span class="w"> </span>remove<span class="w"> </span>-n<span class="w"> </span>mapseq_processing
+</code></pre></div>
+
+<p>Then follow installation steps again.</p>
+<h2 id="troubleshooting-installation">Troubleshooting Installation</h2>
+<h3 id="common-issues">Common Issues</h3>
+<p><strong>Issue</strong>: <code>conda: command not found</code><br />
+- <strong>Solution</strong>: Ensure conda is installed and in your PATH. Restart terminal after installation.</p>
+<p><strong>Issue</strong>: <code>pip install</code> fails with permission errors<br />
+- <strong>Solution</strong>: Use <code>pip install --user</code> or ensure you're in the conda environment.</p>
+<p><strong>Issue</strong>: Import errors after installation<br />
+- <strong>Solution</strong>: Verify environment is activated and packages are installed:<br />
+<code>bash
+  conda activate mapseq_processing
+  pip list | grep numpy</code></p>
+<p><strong>Issue</strong>: SymPy errors during N₀ estimation<br />
+- <strong>Solution</strong>: Ensure sympy version ≥ 1.9. Update with <code>pip install --upgrade sympy</code>.</p>
+<h3 id="getting-help">Getting Help</h3>
+<ul>
+<li>Check <a href="12_Troubleshooting_Best_Practices.html">Chapter 12: Troubleshooting and Best Practices</a></li>
+<li>Review error messages carefully</li>
+<li>Verify all dependencies are installed</li>
+<li>Check Python version matches requirements</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<p>After successful installation:</p>
+<ol>
+<li><strong>Prepare your data</strong>: See <a href="03_Data_Preparation.html">Chapter 3: Data Preparation</a>. Run preprocessing to produce an aggregated matrix:<br />
+<code>bash
+   python preprocess_and_aggregate.py -i /path/to/input/nbcm_files/ -o /path/to/output/</code></li>
+<li><strong>Run the pipeline</strong>: Either use the command file (recommended) or run main processing manually. To use the command file: edit <code>all_commands.txt</code> (or <code>all_commands_all-parameters.txt</code>) so paths and sample names match your project, make the script executable if needed (<code>chmod +x run_commands.sh</code>), then from the repository root run <code>./run_commands.sh</code>. To run main processing once manually:<br />
+<code>bash
+   python process-nbcm-tsv.py -o /path/to/output/ -s sample_name -d /path/to/data.tsv -l "RSP,PM,AM,AL,LM,neg,inj"</code><br />
+   See <a href="04_Main_Processing_Pipeline.html">Chapter 4: Main Processing Pipeline</a> for all arguments.</li>
+<li><strong>Run helper scripts</strong>: See <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a>. The command file can include helper script commands in the correct order; otherwise run them individually after main processing.</li>
+</ol>
+<hr />
+<p><em>For detailed usage instructions, proceed to <a href="03_Data_Preparation.html">Chapter 3: Data Preparation</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

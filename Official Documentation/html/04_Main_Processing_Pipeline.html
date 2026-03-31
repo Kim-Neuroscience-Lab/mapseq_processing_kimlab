@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Main Processing Pipeline</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-4-main-processing-pipeline">Chapter 4: Main Processing Pipeline</h1>
+<h2 id="overview">Overview</h2>
+<p>The main processing script <code>process-nbcm-tsv.py</code> is the core of the MAPseq analysis pipeline. It performs per-sample processing of NBCM (neural barcode count matrix) data, including quality filtering, normalization, population estimation, probability model calculations, and statistical testing.</p>
+<h2 id="recommended-batch-run-via-command-file">Recommended: Batch Run via Command File</h2>
+<p>The standard workflow is to include <code>process-nbcm-tsv.py</code> (and later helper script) commands in <code>all_commands.txt</code> (or <code>all_commands_all-parameters.txt</code>), make the script executable if needed (<code>chmod +x run_commands.sh</code>), and run <strong><code>./run_commands.sh</code></strong> from the repository root. The script executes each line of the command file in order and logs output. Edit the command file so paths and sample names match your project. See <a href="01_Introduction.html">Chapter 1: Introduction</a> and <a href="02_Installation_Setup.html">Chapter 2: Installation and Setup</a> for the full workflow.</p>
+<p>The sections below describe the main script in detail for understanding and for manual execution of individual runs.</p>
+<h2 id="command-line-interface">Command-Line Interface</h2>
+<h3 id="basic-usage">Basic Usage</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>/path/to/output<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-s<span class="w"> </span>sample_name<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-d<span class="w"> </span>/path/to/data.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span>
+</code></pre></div>
+
+<h3 id="required-arguments">Required Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-o, --out_dir</code></td>
+<td>Output directory for saving results</td>
+</tr>
+<tr>
+<td><code>-s, --sample_name</code></td>
+<td>Sample name (prefix for output files)</td>
+</tr>
+<tr>
+<td><code>-d, --data_file</code></td>
+<td>Path to input NBCM file (<code>.tsv</code> or aggregated matrix)</td>
+</tr>
+<tr>
+<td><code>-l, --labels</code></td>
+<td>Comma-separated column labels (must include <code>neg</code> and <code>inj</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Label Format:</strong><br />
+- Use <code>neg</code> for negative control columns and <code>inj</code> for injection site column (required).<br />
+- Use any names for target regions (e.g., <code>RSP</code>, <code>PM</code>, <code>AM</code>, <code>AL</code>, <code>LM</code>); avoid spaces and special characters in the list.<br />
+- No spaces between labels: <code>"RSP,PM,AM,AL,LM,neg,inj"</code>.<br />
+- The code may sort target areas if you use repeat-value names (e.g. <code>visp1,visp2,visp3</code>). Multiple <code>neg</code> or <code>inj</code> columns in a matrix are untested.</p>
+<h3 id="optional-arguments">Optional Arguments</h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-i, --injection_umi_min</code></td>
+<td>1</td>
+<td>Minimum injection UMI threshold (Han et al. 2018: 300; Klingler et al. 2018: 100)</td>
+</tr>
+<tr>
+<td><code>-t, --min_target_count</code></td>
+<td>10</td>
+<td>Minimum UMI in at least one target (Han et al. 2018: 10)</td>
+</tr>
+<tr>
+<td><code>-r, --min_body_to_target_ratio</code></td>
+<td>10</td>
+<td>Minimum injection/target ratio (Han et al. 2018: 10)</td>
+</tr>
+<tr>
+<td><code>-u, --target_umi_min</code></td>
+<td>2</td>
+<td>Threshold for target UMI noise filtering: values in a row below this are set to zero (e.g. row <code>[0,1,0,35,12,1,0,120,1,0]</code> with default 2 becomes <code>[0,0,0,35,12,0,0,120,0,0]</code>)</td>
+</tr>
+<tr>
+<td><code>-a, --alpha</code></td>
+<td>0.05</td>
+<td>Significance threshold for Bonferroni correction</td>
+</tr>
+<tr>
+<td><code>-f, --apply_outlier_filtering</code></td>
+<td>False</td>
+<td>Enable outlier filtering (mean + 2×std)</td>
+</tr>
+<tr>
+<td><code>--force_user_threshold</code></td>
+<td>False</td>
+<td>If set, use your <code>-u</code> value; otherwise the script may use the larger of: your value, UMI KDE elbow, max value in negative control column, or default 2</td>
+</tr>
+<tr>
+<td><code>--is-anchor-model</code></td>
+<td>False</td>
+<td>Mark as anchor/baseline model (P60)</td>
+</tr>
+<tr>
+<td><code>--anchor-model-file</code></td>
+<td>None</td>
+<td>Path to anchor probabilities CSV</td>
+</tr>
+<tr>
+<td><code>--anchor-correlation-file</code></td>
+<td>None</td>
+<td>Path to anchor correlation matrix CSV</td>
+</tr>
+<tr>
+<td><code>--model-type</code></td>
+<td>all</td>
+<td>Which models to run: <code>uniform</code>, <code>region_specific</code>, <code>correlated</code>, <code>all</code>, etc.</td>
+</tr>
+<tr>
+<td><code>--smoothing-alpha</code></td>
+<td>1.0</td>
+<td>Smoothing parameter for smoothed_empirical model</td>
+</tr>
+<tr>
+<td><code>-A, --special_area_1</code>, <code>-B, --special_area_2</code></td>
+<td>—</td>
+<td>Optional; used for some 2-region comparisons. Behavior is now derived from labels; these are legacy/deprecated.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="processing-steps">Processing Steps</h2>
+<h3 id="step-1-data-loading">Step 1: Data Loading</h3>
+<p><strong>Function</strong>: <code>load_df()</code> in <code>process-nbcm-tsv.py</code></p>
+<p>Loads NBCM file and extracts:<br />
+- Barcode column (required)<br />
+- Injection column (<code>inj</code>)<br />
+- Negative control column (<code>neg</code>)<br />
+- Target region columns</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::load_df()</code></p>
+<h3 id="step-2-quality-filtering">Step 2: Quality Filtering</h3>
+<p><strong>Function</strong>: <code>clean_and_filter()</code> in <code>process-nbcm-tsv.py</code></p>
+<p><strong>Filtering Steps:</strong></p>
+<ol>
+<li><strong>Remove zero-projection rows</strong>: Cells with no target projections</li>
+<li><strong>Negative control filtering</strong>: Remove rows where <code>neg &gt; 0</code></li>
+<li><strong>Injection threshold</strong>: Remove rows where <code>inj &lt; injection_umi_min</code></li>
+<li><strong>Target threshold</strong>: Remove rows where no target has UMI ≥ <code>min_target_count</code></li>
+<li><strong>Injection-to-target ratio</strong>: Remove rows where <code>inj / max(target) &lt; min_body_to_target_ratio</code></li>
+<li><strong>Target UMI thresholding</strong>: Set target values &lt; <code>target_umi_min</code> to zero</li>
+<li><strong>Optional outlier filtering</strong>: Remove rows with values &gt; mean + 2×std</li>
+</ol>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::clean_and_filter()</code></p>
+<h3 id="step-3-normalization">Step 3: Normalization</h3>
+<p><strong>Function</strong>: <code>normalize_rows()</code> in <code>process-nbcm-tsv.py</code></p>
+<p>Each row (cell) is normalized by its maximum value:</p>
+<p>$$normalized_{ij} = \frac{value_{ij}}{\max_k(value_{ik})}$$</p>
+<p>This converts UMI counts to relative projection strengths per cell.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::normalize_rows()</code></p>
+<h3 id="step-4-projection-counts">Step 4: Projection Counts</h3>
+<p><strong>Function</strong>: <code>calculate_projections_from_matrix()</code> in <code>process-nbcm-tsv.py</code></p>
+<p>Calculates:<br />
+- <strong>Column counts</strong>: Number of cells projecting to each region (binary presence)<br />
+- <strong>Total projections</strong>: Sum of column counts</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::calculate_projections_from_matrix()</code></p>
+<h3 id="step-5-population-estimation-n0">Step 5: Population Estimation (N₀)</h3>
+<p><strong>Function</strong>: <code>solve_for_roots()</code> in <code>process-nbcm-tsv.py</code></p>
+<p>Estimates true population size using inclusion-exclusion principle:</p>
+<p>$$\pi = 1 - \prod_{k=0}^{m}\left(1 - \frac{s_k}{N_0}\right)$$</p>
+<p>$$\pi \cdot N_0 = N_{obs}$$</p>
+<p>Solves symbolically using SymPy and selects largest real root &gt; N_obs.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
+<p><strong>Root Selection</strong> (in main script after <code>solve_for_roots()</code>):</p>
+<div class="codehilite"><pre><span></span><code><span class="n">valid_N0</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span> <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">is_real</span> <span class="ow">and</span> <span class="n">root</span> <span class="o">&gt;</span> <span class="n">observed_cells</span><span class="p">]</span>
+<span class="n">N0_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">valid_N0</span><span class="p">)</span>  <span class="c1"># Largest valid root</span>
+</code></pre></div>
+
+<h3 id="step-6-anchor-model-system">Step 6: Anchor Model System</h3>
+<p><strong>Function</strong>: <code>load_anchor_model()</code> in <code>process-nbcm-tsv.py</code></p>
+<p>If <code>--anchor-model-file</code> is provided:<br />
+- Loads P60 anchor probabilities<br />
+- Uses anchor probabilities with local N₀ for expected counts<br />
+- Enables cross-cohort comparison</p>
+<p><strong>Expected Count Calculation</strong> (in main script):</p>
+<div class="codehilite"><pre><span></span><code><span class="n">psdict_for_expected</span> <span class="o">=</span> <span class="n">anchor_probs_loaded</span> <span class="k">if</span> <span class="n">anchor_probs_loaded</span> <span class="k">else</span> <span class="n">psdict_region_specific</span>
+</code></pre></div>
+
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::load_anchor_model()</code></p>
+<h3 id="step-7-probability-model-calculations">Step 7: Probability Model Calculations</h3>
+<p>Multiple probability models are calculated (see <a href="06_Probability_Models.html">Chapter 6: Probability Models</a> for details):</p>
+<ol>
+<li><strong>Uniform Model</strong> (pₑ): Lines 649-671</li>
+<li><strong>Region-Specific Model</strong> (pᵢ): Lines 680-690, 728-763</li>
+<li><strong>Correlated Model</strong>: Lines 765-816</li>
+<li><strong>Additional models</strong>: Empirical, smoothed empirical, max entropy, etc.</li>
+</ol>
+<p><strong>Code References</strong>:<br />
+- Uniform: <code>process-nbcm-tsv.py::compute_motif_probabilities()</code><br />
+- Region-specific: <code>process-nbcm-tsv.py::compute_motif_probabilities_region_specific()</code><br />
+- Correlated: <code>process-nbcm-tsv.py::compute_motif_probabilities_correlated()</code></p>
+<h3 id="step-8-statistical-testing">Step 8: Statistical Testing</h3>
+<p><strong>Function</strong>: <code>binomtest()</code> from scipy.stats</p>
+<p>For each motif:<br />
+- <strong>Observed count</strong>: Number of cells with this motif<br />
+- <strong>Expected count</strong>: <code>N₀ × P(motif)</code> from model<br />
+- <strong>Binomial test</strong>: Two-tailed test with n = N₀, p = P(motif)</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (binomial testing section)</p>
+<h3 id="step-9-effect-size-calculation">Step 9: Effect Size Calculation</h3>
+<p><strong>Formula</strong>:<br />
+$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
+<p><strong>Significance Grouping</strong>:<br />
+- Group 1: Over-represented + significant (p &lt; α_corrected)<br />
+- Group 2: Under-represented + significant (p &lt; α_corrected)<br />
+- Group 3: Over-represented + non-significant<br />
+- Group 4: Under-represented + non-significant</p>
+<h3 id="step-10-visualization">Step 10: Visualization</h3>
+<p>Generates multiple plots:<br />
+- Effect significance plots (volcano plots)<br />
+- Upsetplots<br />
+- Per-cell projection strength plots<br />
+- 2-region motif graphs</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::plot_effect_significance()</code></p>
+<h2 id="output-files">Output Files</h2>
+<h3 id="per-sample-outputs">Per-Sample Outputs</h3>
+<p><strong>Location</strong>: <code>{out_dir}/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{sample}_Filtered_Matrix.csv</code></td>
+<td>Filtered UMI count matrix</td>
+</tr>
+<tr>
+<td><code>{sample}_Normalized_Matrix.csv</code></td>
+<td>Row-normalized matrix</td>
+</tr>
+<tr>
+<td><code>{sample}_UMI_Total_Counts.csv</code></td>
+<td>Summed UMI counts per region</td>
+</tr>
+<tr>
+<td><code>{sample}_Region-specific_Probabilities_N0based.csv</code></td>
+<td>Region probabilities (if anchor)</td>
+</tr>
+<tr>
+<td><code>{sample}_Conditional_Probability_Matrix.csv</code></td>
+<td>P(B|A) matrix (if anchor)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="analysis-outputs">Analysis Outputs</h3>
+<p><strong>Location</strong>: <code>{out_dir}/analysis/{model}/</code></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{sample}_upsetplot_{model}.csv</code></td>
+<td>Motif results with statistics</td>
+</tr>
+<tr>
+<td><code>{sample}_effect_significance_{model}.png</code></td>
+<td>Volcano plot</td>
+</tr>
+<tr>
+<td><code>{sample}_per_cell_proj_strength_{model}.png</code></td>
+<td>Per-cell projection patterns</td>
+</tr>
+<tr>
+<td><code>{sample}_panel_g_broadcasting_from_canonical_{model}.svg</code></td>
+<td>2-region motif graph</td>
+</tr>
+<tr>
+<td><code>projection_summary.csv</code></td>
+<td>Summary metrics</td>
+</tr>
+</tbody>
+</table>
+<h3 id="upsetplot-csv-columns">Upsetplot CSV Columns</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Motifs</code></td>
+<td>List of regions in motif (e.g., "['al', 'lm']")</td>
+</tr>
+<tr>
+<td><code>Observed</code></td>
+<td>Count of neurons with this motif</td>
+</tr>
+<tr>
+<td><code>Expected</code></td>
+<td>Model-predicted count</td>
+</tr>
+<tr>
+<td><code>Expected SD</code></td>
+<td>Standard deviation of expected count</td>
+</tr>
+<tr>
+<td><code>Effect Size</code></td>
+<td>log₂(Observed/Expected)</td>
+</tr>
+<tr>
+<td><code>P-value</code></td>
+<td>Two-tailed binomial test p-value</td>
+</tr>
+<tr>
+<td><code>Degree</code></td>
+<td>Number of regions in motif</td>
+</tr>
+<tr>
+<td><code>Group</code></td>
+<td>Significance group (1-4)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="anchor-model-workflow">Anchor Model Workflow</h2>
+<h3 id="creating-anchor-model-p60">Creating Anchor Model (P60)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-s<span class="w"> </span>P60_ALL<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-d<span class="w"> </span>aggregated_cleaned_matrix.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--is-anchor-model
+</code></pre></div>
+
+<p><strong>Outputs</strong>:<br />
+- <code>P60_ALL_Region-specific_Probabilities_N0based.csv</code><br />
+- <code>P60_ALL_Conditional_Probability_Matrix.csv</code></p>
+<h3 id="using-anchor-model-p3-p12-p20">Using Anchor Model (P3, P12, P20)</h3>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-s<span class="w"> </span>P12_ALL<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-d<span class="w"> </span>aggregated_cleaned_matrix.tsv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--anchor-model-file<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Region-specific_Probabilities_N0based.csv<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--anchor-correlation-file<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Conditional_Probability_Matrix.csv
+</code></pre></div>
+
+<p><strong>Expected counts</strong> use P60 probabilities with local N₀.</p>
+<h2 id="code-architecture">Code Architecture</h2>
+<h3 id="main-data-flow">Main Data Flow</h3>
+<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
+<span class="w">    </span><span class="n">Load</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">NBCM</span><span class="w"> </span><span class="n">File</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Filter</span><span class="p">[</span><span class="n">Quality</span><span class="w"> </span><span class="n">Filtering</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Filter</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Norm</span><span class="p">[</span><span class="n">Normalize</span><span class="w"> </span><span class="n">Rows</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Norm</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Proj</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Projections</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Proj</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">N0</span><span class="p">[</span><span class="n">Estimate</span><span class="w"> </span><span class="n">N₀</span><span class="p">]</span>
+<span class="w">    </span><span class="n">N0</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Anchor</span><span class="p">{</span><span class="n">Anchor</span><span class="w"> </span><span class="n">Model</span><span class="o">?</span><span class="p">}</span>
+<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">Yes</span><span class="o">|</span><span class="w"> </span><span class="n">LoadAnchor</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">P60</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">No</span><span class="o">|</span><span class="w"> </span><span class="n">LocalProbs</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Local</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
+<span class="w">    </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Model</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
+<span class="w">    </span><span class="n">LocalProbs</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span>
+<span class="w">    </span><span class="n">Models</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Stats</span><span class="p">[</span><span class="n">Statistical</span><span class="w"> </span><span class="n">Testing</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Stats</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Effect</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Effect</span><span class="w"> </span><span class="n">Sizes</span><span class="p">]</span>
+<span class="w">    </span><span class="n">Effect</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Viz</span><span class="p">[</span><span class="n">Generate</span><span class="w"> </span><span class="n">Visualizations</span><span class="p">]</span>
+</code></pre></div>
+
+<h3 id="key-functions">Key Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Lines</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load_df()</code></td>
+<td>1384+</td>
+<td>Load and parse NBCM file</td>
+</tr>
+<tr>
+<td><code>clean_and_filter()</code></td>
+<td>288-443</td>
+<td>Quality filtering</td>
+</tr>
+<tr>
+<td><code>normalize_rows()</code></td>
+<td>271-287</td>
+<td>Row normalization</td>
+</tr>
+<tr>
+<td><code>calculate_projections_from_matrix()</code></td>
+<td>186-212</td>
+<td>Calculate projection counts</td>
+</tr>
+<tr>
+<td><code>solve_for_roots()</code></td>
+<td>217-224</td>
+<td>N₀ estimation</td>
+</tr>
+<tr>
+<td><code>load_anchor_model()</code></td>
+<td>245-266</td>
+<td>Load anchor probabilities</td>
+</tr>
+<tr>
+<td><code>compute_motif_probabilities_*()</code></td>
+<td>444+, 728+, 765+</td>
+<td>Model probability calculations</td>
+</tr>
+<tr>
+<td><code>plot_effect_significance()</code></td>
+<td>1986+</td>
+<td>Visualization</td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="common-errors">Common Errors</h3>
+<p><strong>Error</strong>: "No valid positive real root found for N0"<br />
+- <strong>Cause</strong>: N₀ estimation failed (may indicate data quality issues)<br />
+- <strong>Solution</strong>: Check projection counts, verify data quality</p>
+<p><strong>Error</strong>: "Mismatch: Normalized matrix columns"<br />
+- <strong>Cause</strong>: Column count mismatch after filtering<br />
+- <strong>Solution</strong>: Verify label argument matches data columns</p>
+<p><strong>Error</strong>: "You must map a column to 'barcodes'"<br />
+- <strong>Cause</strong>: Missing barcode column in preprocessing<br />
+- <strong>Solution</strong>: Ensure preprocessing mapped a column to <code>barcodes</code></p>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ul>
+<li><strong>Large datasets</strong>: Processing time scales with number of cells and regions</li>
+<li><strong>N₀ estimation</strong>: Symbolic solving can be slow for many regions</li>
+<li><strong>Visualization</strong>: Plot generation may take time for large motif sets</li>
+<li><strong>Memory</strong>: Keep sufficient RAM for matrix operations</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<p>After main processing:</p>
+<ol>
+<li><strong>Review outputs</strong>: Check effect significance plots and upsetplot CSVs</li>
+<li><strong>Run helper scripts</strong>: See <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a></li>
+<li><strong>Interpret results</strong>: See <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Interpretation</a></li>
+</ol>
+<hr />
+<p><em>For detailed statistical methods, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>. For probability models, see <a href="06_Probability_Models.html">Chapter 6: Probability Models</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

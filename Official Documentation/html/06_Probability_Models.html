@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 6: Probability Models</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-6-probability-models">Chapter 6: Probability Models</h1>
+<h2 id="overview">Overview</h2>
+<p>The MAPseq pipeline implements multiple probability models to identify non-random projection patterns. This chapter describes all available models, their assumptions, mathematical formulations, and implementations.</p>
+<h2 id="model-comparison">Model Comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Parameters</th>
+<th>Independence</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Uniform (pₑ)</strong></td>
+<td>1</td>
+<td>Full independence</td>
+<td>Baseline comparison</td>
+</tr>
+<tr>
+<td><strong>Region-Specific (pᵢ)</strong></td>
+<td>n (one per region)</td>
+<td>Independence between regions</td>
+<td>Region-specific rates</td>
+</tr>
+<tr>
+<td><strong>Correlated</strong></td>
+<td>n + n²</td>
+<td>Pairwise correlations</td>
+<td>Captures correlations</td>
+</tr>
+<tr>
+<td><strong>Empirical</strong></td>
+<td>Observed frequencies</td>
+<td>None</td>
+<td>Perfect P60 fit</td>
+</tr>
+<tr>
+<td><strong>Smoothed Empirical</strong></td>
+<td>Observed + smoothing</td>
+<td>None</td>
+<td>Regularized empirical</td>
+</tr>
+<tr>
+<td><strong>Max Entropy</strong></td>
+<td>Constraints (marginals + correlations)</td>
+<td>None</td>
+<td>Principled approach</td>
+</tr>
+<tr>
+<td><strong>Hierarchical Correlations</strong></td>
+<td>Higher-order correlations</td>
+<td>None</td>
+<td>Complex interactions</td>
+</tr>
+<tr>
+<td><strong>Negative Binomial</strong></td>
+<td>pᵢ + dispersion</td>
+<td>Independence</td>
+<td>Overdispersion</td>
+</tr>
+<tr>
+<td><strong>Zero-Inflated</strong></td>
+<td>pᵢ + zero-inflation</td>
+<td>Independence</td>
+<td>Excess zeros</td>
+</tr>
+<tr>
+<td><strong>Bayesian Hierarchical</strong></td>
+<td>Dirichlet prior</td>
+<td>Independence</td>
+<td>Uncertainty quantification</td>
+</tr>
+<tr>
+<td><strong>ML Non-Parametric</strong></td>
+<td>Learned function</td>
+<td>None</td>
+<td>Maximum flexibility</td>
+</tr>
+</tbody>
+</table>
+<h2 id="model-1-uniform-edge-probability-pe">Model 1: Uniform Edge Probability (pₑ)</h2>
+<h3 id="assumption">Assumption</h3>
+<p>Every neuron has the same probability <strong>pₑ</strong> of projecting to any given region, independent of which region.</p>
+<h3 id="derivation-of-pe">Derivation of pₑ</h3>
+<p>Given N₀ and n regions, if each projection has probability pₑ:</p>
+<p>$$P(\text{detected}) = 1 - (1 - p_e)^n$$</p>
+<p>Since we observe N_obs neurons out of N₀:</p>
+<p>$$\left(1 - (1-p_e)^n\right) \cdot N_0 = N_{obs}$$</p>
+<p>We solve this symbolically for pₑ, selecting solutions in (0, 1).</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities()</code> (uniform)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">pe_solutions</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe</span><span class="p">)</span><span class="o">**</span><span class="nb">len</span><span class="p">(</span><span class="n">projections</span><span class="p">))</span> <span class="o">*</span> <span class="n">N0_value</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">,</span> <span class="n">pe</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="motif-probability">Motif Probability</h3>
+<p>Under this model, the probability of a motif with k regions:</p>
+<p>$$P(k \text{ regions}) = p_e^k \cdot (1-p_e)^{(R-k)}$$</p>
+<p>Where R = total number of regions.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (uniform pₑ calculation)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">motif_probs_uniform</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">n</span><span class="p">:</span> <span class="p">(</span><span class="n">pe_num</span> <span class="o">**</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe_num</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">total_regions</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">total_regions</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="limitations">Limitations</h3>
+<ul>
+<li>Assumes all regions equally likely (biologically unrealistic)</li>
+<li>Ignores region-specific differences in projection rates</li>
+</ul>
+<h2 id="model-2-region-specific-probability-pi">Model 2: Region-Specific Probability (pᵢ)</h2>
+<h3 id="assumption_1">Assumption</h3>
+<p>Each region i has its own projection probability based on observed data:</p>
+<p>$$p_i = \frac{N_i}{N_0}$$</p>
+<p>Where:<br />
+- $N_i$ = number of neurons projecting to region i<br />
+- $N_0$ = estimated total population</p>
+<h3 id="motif-probability-formula">Motif Probability Formula</h3>
+<p>For a specific motif defined by subset M of regions:</p>
+<p>$$P(\text{motif } M) = \prod_{i \in M} p_i \cdot \prod_{j \notin M} (1 - p_j)$$</p>
+<p><strong>Interpretation:</strong> Treats each region's projection as an independent Bernoulli trial with region-specific success probability.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_region_specific()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_motif_probabilities_region_specific</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">,</span> <span class="n">region_probs_dict</span><span class="p">,</span> <span class="n">region_names</span><span class="p">):</span>
+    <span class="n">motif_probs_rs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">motif_regions</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">):</span>
+        <span class="n">prob</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">region_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">motif_regions</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># p_i</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>  <span class="c1"># (1 - p_i)</span>
+        <span class="n">motif_probs_rs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
+    <span class="k">return</span> <span class="n">motif_probs_rs</span>
+</code></pre></div>
+
+<h3 id="limitations_1">Limitations</h3>
+<ul>
+<li>Assumes independence between regions (may not hold biologically)</li>
+<li>May underestimate multi-region motifs if correlations exist</li>
+</ul>
+<h2 id="model-3-correlated-binomial">Model 3: Correlated Binomial</h2>
+<h3 id="motivation">Motivation</h3>
+<p>Models 1 and 2 assume <strong>independence</strong> between projections to different regions. However, biological evidence suggests projection patterns may be correlated—neurons projecting to region A may be more (or less) likely to also project to region B.</p>
+<h3 id="conditional-probability-matrix">Conditional Probability Matrix</h3>
+<p>We compute <strong>P(B|A)</strong> = probability of projecting to region B, given projection to region A:</p>
+<p>$$P(B|A) = \frac{\text{neurons projecting to both A and B}}{\text{neurons projecting to A}}$$</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::gen_prob_matrix()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">gen_prob_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">cells</span><span class="p">,</span> <span class="n">regions</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">regions</span><span class="p">,</span> <span class="n">regions</span><span class="p">))</span>  <span class="c1"># area B x area A</span>
+
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>  <span class="c1"># For each region A</span>
+        <span class="n">ids_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="n">col</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">sub_col</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">ids_col</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>  <span class="c1"># For each region B</span>
+            <span class="n">ids_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">sub_col</span><span class="p">[:,</span> <span class="n">row</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">ids_col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">=</span> <span class="n">ids_row</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">ids_col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># P(B|A)</span>
+            <span class="n">mat</span><span class="p">[</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
+
+    <span class="k">return</span> <span class="n">mat</span>
+</code></pre></div>
+
+<h3 id="motif-probability-using-chain-rule">Motif Probability Using Chain Rule</h3>
+<p>For multi-region motifs, we use the chain rule of probability:</p>
+<p>$$P(A, B, C, ...) = P(A) \cdot P(B|A) \cdot P(C|B) \cdot ...$$</p>
+<p>Regions are sorted alphabetically for consistent ordering.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_correlated()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_motif_probabilities_correlated</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">,</span> <span class="n">region_probs_dict</span><span class="p">,</span> 
+                                           <span class="n">cond_prob_matrix</span><span class="p">,</span> <span class="n">region_names</span><span class="p">):</span>
+    <span class="n">motif_probs_corr</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">motif_regions</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">motif_regions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># Single region: use marginal probability</span>
+            <span class="n">region</span> <span class="o">=</span> <span class="n">motif_regions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">motif_probs_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Multi-region: use chain rule</span>
+            <span class="n">sorted_regions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">motif_regions</span><span class="p">)</span>
+
+            <span class="c1"># Start with first region&#39;s marginal probability</span>
+            <span class="n">prob</span> <span class="o">=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+
+            <span class="c1"># Multiply by conditional probabilities</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">)):</span>
+                <span class="n">prev_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">curr_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">cond_prob</span> <span class="o">=</span> <span class="n">cond_prob_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prev_region</span><span class="p">,</span> <span class="n">curr_region</span><span class="p">]</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="n">cond_prob</span>
+
+            <span class="n">motif_probs_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
+
+    <span class="k">return</span> <span class="n">motif_probs_corr</span>
+</code></pre></div>
+
+<h3 id="limitations_2">Limitations</h3>
+<ul>
+<li>Only captures <strong>pairwise</strong> correlations</li>
+<li>Chain rule assumes <strong>ordering matters</strong> (may not be optimal)</li>
+<li>May not capture higher-order interactions</li>
+</ul>
+<h2 id="additional-models">Additional Models</h2>
+<h3 id="empirical-model">Empirical Model</h3>
+<p><strong>Description</strong>: Uses observed P60 motif frequencies directly as expected values.</p>
+<p><strong>Formula</strong>: <br />
+$$P(motif) = \frac{observed_count(motif)}{N0_P60}$$</p>
+<p><strong>Pros</strong>: Perfect fit to P60 (0% significant)<br />
+<strong>Cons</strong>: Overfitting risk, no generalization</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_empirical()</code></p>
+<h3 id="smoothed-empirical-model">Smoothed Empirical Model</h3>
+<p><strong>Description</strong>: Empirical frequencies with additive smoothing (Laplace).</p>
+<p><strong>Formula</strong>:<br />
+$$P(motif) = \frac{observed_count(motif) + \alpha}{N0_P60 + \alpha \times total_motifs}$$</p>
+<p><strong>Pros</strong>: Reduces overfitting, handles sparse data<br />
+<strong>Cons</strong>: Arbitrary smoothing parameter α</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_smoothed_empirical()</code></p>
+<h3 id="maximum-entropy-model">Maximum Entropy Model</h3>
+<p><strong>Description</strong>: Finds probability distribution that matches P60 constraints (marginals, pairwise correlations) while being maximally uniform.</p>
+<p><strong>Mathematical Formulation</strong>:<br />
+- Maximize entropy: $H = -\Sigma P(motif) \times \log P(motif)$<br />
+- Subject to constraints:<br />
+  - $\Sigma P(motif) = 1$ (normalization)<br />
+  - $\Sigma P(motif) \times I(region_i \in motif) = p_i$ (marginals)<br />
+  - $\Sigma P(motif) \times I(region_i, region_j \in motif) = p_{ij}$ (pairwise correlations)</p>
+<p><strong>Pros</strong>: Theoretically principled, matches constraints<br />
+<strong>Cons</strong>: Computationally complex, may not fit perfectly</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_max_entropy()</code></p>
+<h3 id="hierarchical-correlations-model">Hierarchical Correlations Model</h3>
+<p><strong>Description</strong>: Explicitly models higher-order interactions (3-way, 4-way correlations).</p>
+<p><strong>Pros</strong>: Captures complex interactions<br />
+<strong>Cons</strong>: Very complex, many parameters, overfitting risk</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_hierarchical_correlations()</code></p>
+<h3 id="negative-binomial-model">Negative Binomial Model</h3>
+<p><strong>Description</strong>: Accounts for overdispersion (variance &gt; mean) in motif counts.</p>
+<p><strong>Model</strong>: $Count \sim NegativeBinomial(mean, dispersion)$</p>
+<p><strong>Pros</strong>: Handles overdispersion, better uncertainty quantification<br />
+<strong>Cons</strong>: May not solve systematic bias</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_negative_binomial()</code></p>
+<h3 id="zero-inflated-model">Zero-Inflated Model</h3>
+<p><strong>Description</strong>: Accounts for excess zeros (many motifs never observed).</p>
+<p><strong>Model</strong>: Two-component:<br />
+- With probability π: motif count = 0 (structural zero)<br />
+- With probability (1-π): motif count ~ Binomial/NegativeBinomial</p>
+<p><strong>Pros</strong>: Handles excess zeros, biologically plausible<br />
+<strong>Cons</strong>: Additional complexity</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_zero_inflated()</code></p>
+<h3 id="bayesian-hierarchical-model">Bayesian Hierarchical Model</h3>
+<p><strong>Description</strong>: Models motif probabilities with hierarchical structure and uncertainty.</p>
+<p><strong>Prior</strong>: $P(motif) \sim Dirichlet(\alpha_1, \alpha_2, ..., \alpha_n)$</p>
+<p><strong>Pros</strong>: Quantifies uncertainty, handles sparse data<br />
+<strong>Cons</strong>: Computationally intensive (MCMC), requires prior specification</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_bayesian_hierarchical()</code></p>
+<h3 id="ml-non-parametric-model">ML Non-Parametric Model</h3>
+<p><strong>Description</strong>: Uses machine learning to learn motif probability function from P60 data.</p>
+<p><strong>Pros</strong>: Flexible, no explicit assumptions<br />
+<strong>Cons</strong>: Black box, overfitting risk, less interpretable</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_ml_nonparametric()</code></p>
+<h2 id="anchor-model-integration">Anchor Model Integration</h2>
+<p>All models (except Uniform) can use the anchor model system:</p>
+<p><strong>For P60 (anchor)</strong>:<br />
+- Calculate probabilities from P60 data<br />
+- Save probabilities and correlation matrices</p>
+<p><strong>For developmental cohorts (P3, P12, P20)</strong>:<br />
+- Load P60 anchor probabilities<br />
+- Use anchor probabilities with local N₀:<br />
+  $$Expected_{motif} = P_{P60}(motif) \times N_0^{local}$$</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (region-specific probability calculation)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">psdict_for_expected</span> <span class="o">=</span> <span class="n">anchor_probs_loaded</span> <span class="k">if</span> <span class="n">anchor_probs_loaded</span> <span class="k">else</span> <span class="n">psdict_region_specific</span>
+<span class="n">corr_matrix_for_expected</span> <span class="o">=</span> <span class="n">anchor_corr_loaded</span>
+</code></pre></div>
+
+<h2 id="model-selection">Model Selection</h2>
+<h3 id="recommendations">Recommendations</h3>
+<p><strong>For Strict Fit (&lt;10% significant) with Cross-Cohort Comparability:</strong><br />
+- <strong>Smoothed Empirical Model</strong>: Balances fit quality with overfitting concerns<br />
+- <strong>Maximum Entropy Model</strong>: Theoretically principled, matches constraints</p>
+<p><strong>For Perfect P60 Fit:</strong><br />
+- <strong>Pure Empirical Model</strong>: Guarantees 0% significant in P60</p>
+<p><strong>For Biological Interpretation:</strong><br />
+- <strong>Region-Specific Model</strong>: Most interpretable, region-specific rates<br />
+- <strong>Correlated Model</strong>: Captures pairwise correlations</p>
+<p><strong>For Robustness Assessment:</strong><br />
+- Compare results across multiple models<br />
+- Agreement suggests robust findings</p>
+<h2 id="model-comparison-table">Model Comparison Table</h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Fit Quality</th>
+<th>Complexity</th>
+<th>Interpretability</th>
+<th>Cross-Cohort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uniform</td>
+<td>⭐⭐</td>
+<td>⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Region-Specific</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Correlated</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Empirical</td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Smoothed Empirical</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Max Entropy</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Hierarchical Correlations</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Negative Binomial</td>
+<td>⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Zero-Inflated</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Bayesian Hierarchical</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+</tr>
+<tr>
+<td>ML Non-Parametric</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐⭐⭐⭐</td>
+<td>⭐</td>
+<td>⭐⭐⭐</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>For detailed mathematical formulations, see <a href="10_Mathematical_Functions.html">Chapter 10: Mathematical Functions Reference</a>. For statistical testing, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

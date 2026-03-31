@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 11: Stability Analysis</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-11-stability-analysis">Chapter 11: Stability Analysis</h1>
+<h2 id="overview">Overview</h2>
+<p>This chapter describes the stability analysis framework for assessing whether projection motif frequencies change significantly across developmental timepoints. The analysis uses both model-independent and model-dependent metrics.</p>
+<h2 id="stability-analysis-framework">Stability Analysis Framework</h2>
+<h3 id="central-question">Central Question</h3>
+<p><strong>Do projection motif frequencies change significantly over developmental time?</strong></p>
+<p>This question is addressed using multiple complementary approaches:<br />
+1. <strong>Model-independent analysis</strong>: Direct comparison of observed frequencies<br />
+2. <strong>Model-dependent analysis</strong>: Comparison against statistical model predictions<br />
+3. <strong>Transition analysis</strong>: Specific stage-to-stage comparisons</p>
+<h3 id="key-metrics">Key Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Type</th>
+<th>What It Measures</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kruskal-Wallis</strong></td>
+<td>Model-independent</td>
+<td>Distribution of relative proportions across animals</td>
+<td>Individual-level stability</td>
+</tr>
+<tr>
+<td><strong>Effect Size Range</strong></td>
+<td>Model-dependent</td>
+<td>Change in aggregate deviation from model</td>
+<td>Model-fit stability</td>
+</tr>
+<tr>
+<td><strong>Transition Significance</strong></td>
+<td>Model-independent</td>
+<td>Proportion changes between consecutive stages</td>
+<td>Proportional stability</td>
+</tr>
+<tr>
+<td><strong>Jensen-Shannon Divergence</strong></td>
+<td>Model-independent</td>
+<td>Distribution similarity between ages</td>
+<td>Magnitude of changes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="model-independent-analysis">Model-Independent Analysis</h2>
+<h3 id="kruskal-wallis-test">Kruskal-Wallis Test</h3>
+<p><strong>Purpose</strong>: Tests whether relative proportions across individual animals change over time.</p>
+<p><strong>Null Hypothesis</strong>: The distribution of normalized frequencies across animals is the same at all ages.</p>
+<p><strong>Interpretation</strong>:<br />
+- <strong>p &lt; 0.05</strong>: Relative proportions across animals differ significantly across ages (UNSTABLE)<br />
+- <strong>p ≥ 0.05</strong>: Relative proportions across animals remain stable across ages (STABLE)</p>
+<p><strong>Key Insight</strong>: Tests whether animals maintain the same relative ranking of motif frequencies across development.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code> (line 95)</p>
+<p><strong>Example Results</strong>:<br />
+- 0/31 motifs (0.0%) show significant changes → <strong>STABLE</strong><br />
+- Mean p-value: 0.59, Median: 0.66</p>
+<h3 id="jensen-shannon-divergence">Jensen-Shannon Divergence</h3>
+<p><strong>Purpose</strong>: Measures distribution similarity between ages.</p>
+<p><strong>Range</strong>: 0 (identical) to 1 (maximally different)</p>
+<p><strong>Interpretation</strong>:<br />
+- <strong>JSD &lt; 0.05</strong>: Very similar distributions (stable)<br />
+- <strong>JSD 0.05-0.2</strong>: Moderate difference<br />
+- <strong>JSD &gt; 0.2</strong>: Large difference (unstable)</p>
+<p><strong>Example Results</strong>:<br />
+- P14→P16 vs P22→P24: JSD = 0.0013<br />
+- P22→P24 vs P60+→P62+: JSD = 0.0035<br />
+- P14→P16 vs P60+→P62+: JSD = 0.0019</p>
+<p>All values &lt; 0.05 → <strong>STABLE</strong></p>
+<h2 id="model-dependent-analysis">Model-Dependent Analysis</h2>
+<h3 id="effect-size-trajectories">Effect Size Trajectories</h3>
+<p><strong>Purpose</strong>: Tests whether aggregate counts deviate from model predictions and how these deviations change.</p>
+<p><strong>Calculation</strong>: Effect size calculated at each developmental timepoint:</p>
+<p>$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
+<p><strong>Range</strong>: max(effect_size) - min(effect_size) across ages</p>
+<p><strong>Interpretation</strong>:<br />
+- <strong>Range &gt; 1.0</strong>: Large changes in deviation from model (UNSTABLE)<br />
+- <strong>Range &lt; 1.0</strong>: Relatively stable deviation from model (STABLE)</p>
+<p><strong>Key Insight</strong>: Tests whether aggregate counts shift relative to model predictions across development.</p>
+<p><strong>Example Results</strong>:<br />
+- Uniform model: 71-90% of motifs show range &gt; 1.0 → <strong>UNSTABLE</strong><br />
+- Region-specific model: 74-87% of motifs show range &gt; 1.0 → <strong>UNSTABLE</strong></p>
+<h3 id="transition-significance">Transition Significance</h3>
+<p><strong>Purpose</strong>: Tests whether proportions change between consecutive stages.</p>
+<p><strong>Method</strong>: Fisher's exact test on 2×2 contingency tables</p>
+<p><strong>Null Hypothesis</strong>: The proportion of the motif (relative to all motifs) is the same in both stages.</p>
+<p><strong>Interpretation</strong>:<br />
+- <strong>p &lt; 0.05</strong>: Proportion changed significantly between stages (UNSTABLE)<br />
+- <strong>p ≥ 0.05</strong>: Proportion remained stable between stages (STABLE)</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code> (line 84)</p>
+<p><strong>Example Results</strong>:<br />
+- 13/52 transitions (25.0%) are significant → <strong>MODERATE CHANGES</strong></p>
+<h2 id="logical-consistency">Logical Consistency</h2>
+<h3 id="the-apparent-paradox">The Apparent Paradox</h3>
+<p><strong>Finding 1</strong>: Kruskal-Wallis shows 0% significant → <strong>STABLE</strong></p>
+<p><strong>Finding 2</strong>: Effect size trajectories show 71-87% with large changes → <strong>UNSTABLE</strong></p>
+<p><strong>Finding 3</strong>: Transition significance shows 25% significant → <strong>MODERATE</strong></p>
+<h3 id="why-this-is-logically-consistent">Why This Is Logically Consistent</h3>
+<p>These tests measure <strong>different aspects</strong> of stability:</p>
+<ol>
+<li><strong>Kruskal-Wallis</strong>: Individual-level relative proportions</li>
+<li>Tests whether animals maintain same relative ranking</li>
+<li>
+<p>Can be stable even if aggregate counts shift</p>
+</li>
+<li>
+<p><strong>Effect Size</strong>: Population-level model deviations</p>
+</li>
+<li>Tests whether aggregate counts shift relative to model</li>
+<li>
+<p>Can change even if relative proportions stay same</p>
+</li>
+<li>
+<p><strong>Transition Significance</strong>: Proportional changes</p>
+</li>
+<li>Tests whether proportions change between stages</li>
+<li>Intermediate between complete stability and high instability</li>
+</ol>
+<h3 id="example-scenario">Example Scenario</h3>
+<p><strong>Scenario</strong>: Consistent Relative Proportions, Shifting Model Fit</p>
+<ul>
+<li><strong>P12</strong>: Animal A has 10% of motif X, Animal B has 5% → Aggregate = 7.5%</li>
+<li><strong>P60</strong>: Animal A has 10% of motif X, Animal B has 5% → Aggregate = 7.5%</li>
+<li><strong>Kruskal-Wallis</strong>: Non-significant (relative proportions unchanged)</li>
+<li><strong>But if model's expected value changes</strong>:</li>
+<li>P12 effect size = log₂(7.5/5) = 0.585</li>
+<li>P60 effect size = log₂(7.5/10) = -0.415</li>
+<li>Range = 1.0 (large change!)</li>
+</ul>
+<p><strong>Conclusion</strong>: Relative proportions across animals can be stable while aggregate counts shift relative to model predictions.</p>
+<h2 id="interpretation-guidelines">Interpretation Guidelines</h2>
+<h3 id="overall-stability-assessment">Overall Stability Assessment</h3>
+<ol>
+<li><strong>Start with Kruskal-Wallis results</strong>:</li>
+<li>Count motifs with p &lt; 0.05: High count = unstable system</li>
+<li>
+<p>Count motifs with p ≥ 0.05: High count = stable system</p>
+</li>
+<li>
+<p><strong>Examine transition significance</strong>:</p>
+</li>
+<li>Which transitions have the most significant changes?</li>
+<li>
+<p>Are changes concentrated in specific transitions?</p>
+</li>
+<li>
+<p><strong>Check effect size magnitudes</strong>:</p>
+</li>
+<li>Large effect sizes (&gt;1 or &lt;-1) indicate substantial changes</li>
+<li>
+<p>Small effect sizes (&lt;0.5) indicate minor changes</p>
+</li>
+<li>
+<p><strong>Compare models</strong>:</p>
+</li>
+<li>Do both models agree on stability?</li>
+<li>Agreement suggests robust findings</li>
+</ol>
+<h3 id="motif-specific-stability">Motif-Specific Stability</h3>
+<p><strong>Stable Motifs</strong> (p ≥ 0.05 in Kruskal-Wallis):<br />
+- Consistent representation across ages<br />
+- Small effect size changes<br />
+- No significant transitions</p>
+<p><strong>Unstable Motifs</strong> (p &lt; 0.05 in Kruskal-Wallis):<br />
+- Changing representation across ages<br />
+- Large effect size changes<br />
+- Significant transitions</p>
+<p><strong>Early-Changing Motifs</strong> (significant P3→P12 transition):<br />
+- Changes occur early in development<br />
+- May stabilize later</p>
+<p><strong>Late-Changing Motifs</strong> (significant P20→P60 transition):<br />
+- Changes occur late in development<br />
+- May be maturation effects</p>
+<h3 id="magnitude-of-changes">Magnitude of Changes</h3>
+<p><strong>JSD Interpretation</strong>:<br />
+- &lt; 0.05: Very stable (minimal change)<br />
+- 0.05-0.1: Moderately stable (small changes)<br />
+- 0.1-0.2: Moderately unstable (noticeable changes)<br />
+- &gt; 0.2: Unstable (large changes)</p>
+<p><strong>Effect Size Interpretation</strong>:<br />
+- |Effect Size| &lt; 0.5: Small change<br />
+- |Effect Size| 0.5-1.0: Moderate change<br />
+- |Effect Size| &gt; 1.0: Large change</p>
+<h2 id="recommended-analysis-workflow">Recommended Analysis Workflow</h2>
+<h3 id="step-1-model-independent-analysis">Step 1: Model-Independent Analysis</h3>
+<ol>
+<li>Run Script 01: Get Kruskal-Wallis results</li>
+<li>Calculate JSD between age pairs</li>
+<li>Assess overall stability</li>
+</ol>
+<h3 id="step-2-model-dependent-analysis">Step 2: Model-Dependent Analysis</h3>
+<ol>
+<li>Run Script 07: Get effect size trajectories</li>
+<li>Calculate effect size ranges</li>
+<li>Assess model-fit stability</li>
+</ol>
+<h3 id="step-3-transition-analysis">Step 3: Transition Analysis</h3>
+<ol>
+<li>Run Script 07: Get transition significance</li>
+<li>Identify which transitions show changes</li>
+<li>Assess when changes occur</li>
+</ol>
+<h3 id="step-4-integration">Step 4: Integration</h3>
+<ol>
+<li>Compare model-independent and model-dependent findings</li>
+<li>Identify motifs with consistent patterns</li>
+<li>Interpret biological significance</li>
+</ol>
+<h2 id="key-files-for-stability-analysis">Key Files for Stability Analysis</h2>
+<h3 id="primary-data-sources">Primary Data Sources</h3>
+<ol>
+<li><strong>Script 01: Kruskal-Wallis Results</strong> ⭐ MOST IMPORTANT</li>
+<li>Location: <code>01_motif_analysis_per_animal/{model}/</code></li>
+<li>
+<p>Direct statistical test of temporal stability</p>
+</li>
+<li>
+<p><strong>Script 07: Combined Effect Sizes CSV</strong> ⭐ MOST IMPORTANT</p>
+</li>
+<li>Location: <code>07_motif_significange_trajectories/{model}/combined_effect_sizes_{model}.csv</code></li>
+<li>
+<p>Effect size trajectories for each motif</p>
+</li>
+<li>
+<p><strong>Script 07: Transition Significance CSV</strong> ⭐ MOST IMPORTANT</p>
+</li>
+<li>Location: <code>07_motif_significange_trajectories/{model}/transition_significance.csv</code></li>
+<li>P-values for each transition</li>
+</ol>
+<h3 id="secondary-data-sources">Secondary Data Sources</h3>
+<ol>
+<li><strong>Script 05: Motif Percentage Matrix</strong> ⚠️ SECONDARY</li>
+<li>Location: <code>05_motif_analysis/motif_percent_matrix_by_age_{model}.csv</code></li>
+<li>
+<p>Quantitative percentages for each motif at each age</p>
+</li>
+<li>
+<p><strong>Age-Specific Upsetplot CSVs</strong> ⚠️ SECONDARY</p>
+</li>
+<li>Location: <code>{age}/{parameterization}/analysis/{model}/*_upsetplot_{model}.csv</code></li>
+<li>Core motif data for each age</li>
+</ol>
+<h2 id="summary">Summary</h2>
+<h3 id="answering-do-results-change-significantly-over-time">Answering "Do Results Change Significantly Over Time?"</h3>
+<p><strong>Primary Evidence</strong>:<br />
+1. <strong>Kruskal-Wallis Test</strong>: Model-independent test of frequency distributions<br />
+2. <strong>Transition Significance</strong>: Tests specific stage transitions<br />
+3. <strong>Effect Size Trajectories</strong>: Quantifies magnitude of changes</p>
+<p><strong>Interpretation</strong>:<br />
+- <strong>Many significant results</strong> = unstable system<br />
+- <strong>Few significant results</strong> = stable system<br />
+- <strong>Mixed results</strong> = selective changes in specific motifs</p>
+<p><strong>Key Insight</strong>: Model-independent and model-dependent metrics can give different results without contradiction—they measure different aspects of stability.</p>
+<hr />
+<p><em>For detailed statistical methods, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>. For helper script details, see <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

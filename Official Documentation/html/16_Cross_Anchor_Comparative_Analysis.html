@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Anchor Comparative Analysis</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="cross-anchor-comparative-analysis">Cross-Anchor Comparative Analysis</h1>
+<p>This chapter presents a comparative analysis of trajectory significance testing results across different anchor datasets. Understanding how the choice of anchor affects conclusions is critical for robust interpretation of MAPseq developmental data.</p>
+<hr />
+<h2 id="what-is-an-anchor-dataset">What is an Anchor Dataset?</h2>
+<p>In MAPseq analysis, the "anchor" refers to the developmental stage used as the normalization reference for computing expected projection counts. The three anchors analyzed are:</p>
+<table>
+<thead>
+<tr>
+<th>Anchor</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P12 Anchor</strong></td>
+<td>Uses P12 data as the normalization reference</td>
+</tr>
+<tr>
+<td><strong>P20 Anchor</strong></td>
+<td>Uses P20 data as the normalization reference</td>
+</tr>
+<tr>
+<td><strong>P60 Anchor</strong></td>
+<td>Uses P60 data as the normalization reference</td>
+</tr>
+</tbody>
+</table>
+<p>The choice of anchor affects how "expected" values are calculated, which in turn affects effect sizes and significance determinations. A robust finding should be consistent across anchor choices.</p>
+<hr />
+<h2 id="summary-comparison-all-stages-analysis-p3-p60">Summary Comparison: All Stages Analysis (P3-P60)</h2>
+<h3 id="global-statistics-by-anchor">Global Statistics by Anchor</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>P12 Anchor</th>
+<th>P20 Anchor</th>
+<th>P60 Anchor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spearman significant</td>
+<td>3/26 (12%)</td>
+<td>3/26 (12%)</td>
+<td>2/26 (8%)</td>
+</tr>
+<tr>
+<td>Increasing trends</td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Decreasing trends</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Mixed-effects coefficient</td>
+<td>0.150</td>
+<td>0.167</td>
+<td>0.163</td>
+</tr>
+<tr>
+<td>Mixed-effects p-value</td>
+<td>0.084</td>
+<td>0.061</td>
+<td>0.059</td>
+</tr>
+<tr>
+<td>Direction test (% increasing)</td>
+<td>61.5%</td>
+<td>61.5%</td>
+<td>61.5%</td>
+</tr>
+<tr>
+<td>Direction test p-value</td>
+<td>0.327</td>
+<td>0.327</td>
+<td>0.327</td>
+</tr>
+</tbody>
+</table>
+<h3 id="per-motif-spearman-significance-all-stages">Per-Motif Spearman Significance (All Stages)</h3>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>P12 Anchor</th>
+<th>P20 Anchor</th>
+<th>P60 Anchor</th>
+<th>Consensus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>am+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>am+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>am+lm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+lm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>am+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>al+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+rsp</td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td>NS</td>
+<td>Anchor-Dependent</td>
+</tr>
+<tr>
+<td>am+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>am+lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+lm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+am+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>am+lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am+lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Legend</strong>: SIG (+) = Significant increasing, SIG (-) = Significant decreasing, NS = Not significant</p>
+<hr />
+<h2 id="summary-comparison-nop3-analysis-p12-p60-only">Summary Comparison: noP3 Analysis (P12-P60 only)</h2>
+<h3 id="global-statistics-by-anchor-nop3">Global Statistics by Anchor (noP3)</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>P12 Anchor</th>
+<th>P20 Anchor</th>
+<th>P60 Anchor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spearman significant</td>
+<td>11/26 (42%)</td>
+<td>11/26 (42%)</td>
+<td>10/26 (38%)</td>
+</tr>
+<tr>
+<td><strong>Strict verdict significant</strong></td>
+<td><strong>6/26 (23%)</strong></td>
+<td><strong>9/26 (35%)</strong></td>
+<td><strong>4/26 (15%)</strong></td>
+</tr>
+<tr>
+<td>Increasing trends (Spearman)</td>
+<td>7</td>
+<td>7</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Decreasing trends (Spearman)</td>
+<td>4</td>
+<td>4</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Increasing trends (Strict)</td>
+<td>4</td>
+<td>6</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Decreasing trends (Strict)</td>
+<td>2</td>
+<td>3</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Mixed-effects coefficient</td>
+<td>0.175</td>
+<td>0.206</td>
+<td>0.199</td>
+</tr>
+<tr>
+<td>Mixed-effects p-value</td>
+<td>0.218</td>
+<td>0.159</td>
+<td>0.153</td>
+</tr>
+<tr>
+<td>Direction test (% increasing)</td>
+<td>61.5%</td>
+<td>61.5%</td>
+<td>61.5%</td>
+</tr>
+<tr>
+<td>Direction test p-value</td>
+<td>0.327</td>
+<td>0.327</td>
+<td>0.327</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note</strong>: Strict verdict requires Spearman significance AND crossing of p-value cutoff or effect size = 0 line (see Chapter 15 for methodology).</p>
+<h3 id="per-motif-spearman-significance-nop3">Per-Motif Spearman Significance (noP3)</h3>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>P12 Anchor</th>
+<th>P20 Anchor</th>
+<th>P60 Anchor</th>
+<th>Consensus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>am+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+rsp</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>ROBUST DECREASE</strong></td>
+</tr>
+<tr>
+<td>lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>am+pm</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>ROBUST DECREASE</strong></td>
+</tr>
+<tr>
+<td>al+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+am</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>am+lm</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>ROBUST DECREASE</strong></td>
+</tr>
+<tr>
+<td>al+lm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>am+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td><strong>al+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+am+rsp</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td><strong>SIG (-)</strong></td>
+<td>NS</td>
+<td>Anchor-Dependent</td>
+</tr>
+<tr>
+<td>am+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td>al+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+am+pm</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>am+lm+pm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+lm+pm</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>al+am+lm</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+am+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>am+lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+lm+pm+rsp</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>al+am+lm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+<tr>
+<td><strong>al+am+lm+pm</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>SIG (+)</strong></td>
+<td><strong>ROBUST INCREASE</strong></td>
+</tr>
+<tr>
+<td>al+am+lm+pm+rsp</td>
+<td>NS</td>
+<td>NS</td>
+<td>NS</td>
+<td>Stable</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="robust-findings-across-all-anchors">Robust Findings Across All Anchors</h2>
+<h3 id="all-stages-analysis-p3-p60">All Stages Analysis (P3-P60)</h3>
+<p><strong>Robustly Spearman significant in ALL anchors (2 motifs):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>Direction</th>
+<th>P12 rho</th>
+<th>P20 rho</th>
+<th>P60 rho</th>
+<th>Strict Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>am+pm+rsp</td>
+<td>Increasing</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>al+am+pm+rsp</td>
+<td>Increasing</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td><strong>YES</strong> (crosses ES=0)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note</strong>: Only <code>al+am+pm+rsp</code> meets the strict verdict criterion in the all-stages analysis.</p>
+<p><strong>Anchor-dependent (1 motif):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>P12</th>
+<th>P20</th>
+<th>P60</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>al+am+rsp</td>
+<td>SIG (-)</td>
+<td>SIG (-)</td>
+<td>NS</td>
+<td>Significant in P12/P20 only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="nop3-analysis-p12-p60-only">noP3 Analysis (P12-P60 only)</h3>
+<p><strong>Robustly Spearman significant in ALL anchors (9 motifs):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>Direction</th>
+<th>Spearman Consistent</th>
+<th>Strict Verdict (P60)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>al+rsp</td>
+<td>Decreasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>am+pm</td>
+<td>Decreasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>am+lm</td>
+<td>Decreasing</td>
+<td>Yes</td>
+<td><strong>YES</strong> (crosses both)</td>
+</tr>
+<tr>
+<td>am+pm+rsp</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>al+pm+rsp</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>al+am+pm</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>al+lm+pm</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td>NO (stays in quadrant)</td>
+</tr>
+<tr>
+<td>al+am+pm+rsp</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td><strong>YES</strong> (crosses ES=0)</td>
+</tr>
+<tr>
+<td>al+lm+pm+rsp</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td><strong>YES</strong> (crosses ES=0)</td>
+</tr>
+<tr>
+<td>al+am+lm+pm</td>
+<td>Increasing</td>
+<td>Yes</td>
+<td><strong>YES</strong> (crosses both)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Strict verdict summary (noP3, P60 anchor):</strong> Only 4/9 Spearman-robust motifs also meet the strict criterion.</p>
+<p><strong>Anchor-dependent (1 motif):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Motif</th>
+<th>P12</th>
+<th>P20</th>
+<th>P60</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>al+am+rsp</td>
+<td>SIG (-)</td>
+<td>SIG (-)</td>
+<td>NS</td>
+<td>Significant in P12/P20 only</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="impact-of-anchor-selection-on-conclusions">Impact of Anchor Selection on Conclusions</h2>
+<h3 id="key-observations">Key Observations</h3>
+<ol>
+<li>
+<p><strong>Direction test is invariant</strong>: The proportion of increasing motifs (61.5%) and binomial p-value (0.327) are identical across all anchors. This is because the direction is computed from raw P12-P60 differences.</p>
+</li>
+<li>
+<p><strong>Mixed-effects coefficients vary slightly</strong>: Range from 0.150 (P12) to 0.167 (P20), but all remain marginally non-significant (p = 0.059-0.084).</p>
+</li>
+<li>
+<p><strong>Spearman significance is largely consistent</strong>: The same motifs tend to be significant across anchors, with minor variations.</p>
+</li>
+<li>
+<p><strong>One motif is anchor-sensitive</strong>: <code>al+am+rsp</code> shows a significant decreasing trend with P12 and P20 anchors but not with P60 anchor.</p>
+</li>
+</ol>
+<h3 id="recommendations-for-reporting">Recommendations for Reporting</h3>
+<p><strong>For robust claims</strong>, report only motifs significant across ALL anchors:<br />
+- All stages: am+pm+rsp, al+am+pm+rsp (both increasing)<br />
+- noP3: 9 motifs with robust consensus (see table above)</p>
+<p><strong>For exploratory findings</strong>, note anchor-dependent results with appropriate caveats:<br />
+- al+am+rsp shows anchor-dependent significance</p>
+<p><strong>For methodological transparency</strong>, report:<br />
+- Results are consistent across P12, P20, and P60 anchor choices<br />
+- Mixed-effects global trend is marginally non-significant regardless of anchor<br />
+- Direction bias is not statistically significant in any analysis</p>
+<hr />
+<h2 id="comparison-all-stages-vs-nop3-by-anchor">Comparison: All Stages vs noP3 by Anchor</h2>
+<table>
+<thead>
+<tr>
+<th>Anchor</th>
+<th>All Stages Sig</th>
+<th>noP3 Sig</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P12</td>
+<td>3/26 (12%)</td>
+<td>11/26 (42%)</td>
+<td>+8</td>
+</tr>
+<tr>
+<td>P20</td>
+<td>3/26 (12%)</td>
+<td>11/26 (42%)</td>
+<td>+8</td>
+</tr>
+<tr>
+<td>P60</td>
+<td>2/26 (8%)</td>
+<td>10/26 (38%)</td>
+<td>+8</td>
+</tr>
+</tbody>
+</table>
+<p>The increase in significant motifs when excluding P3 is consistent across all anchors (+8 motifs in each case). This confirms that the P3 stage introduces variability that obscures monotonic trends in the P12-P60 trajectory.</p>
+<hr />
+<h2 id="conclusions">Conclusions</h2>
+<h3 id="hypothesis-evaluation-across-anchors">Hypothesis Evaluation Across Anchors</h3>
+<p><strong>Original hypothesis</strong>: "Motifs do not significantly change over time, however many appear to become more or less over- and under-represented."</p>
+<p><strong>Verdict across all anchors (applying strict criterion)</strong>:</p>
+<p>The hypothesis is <strong>strongly supported</strong> and this conclusion is <strong>robust to anchor selection</strong>:</p>
+<ol>
+<li><strong>Most motifs show no biologically meaningful change</strong>: </li>
+<li>All stages: 24-25/26 (92-96%) fail strict criterion</li>
+<li>
+<p>noP3: 20-22/26 (77-85%) fail strict criterion</p>
+</li>
+<li>
+<p><strong>Very few motifs meet strict criterion (Spearman + threshold crossing)</strong>:</p>
+</li>
+<li>All stages: Only 1-2 motifs across anchors</li>
+<li>
+<p>noP3: Only 4-9 motifs across anchors (varies by anchor)</p>
+</li>
+<li>
+<p><strong>The dramatic reduction from Spearman to strict verdict is consistent across anchors</strong>:</p>
+</li>
+<li>noP3 Spearman: 10-11 significant</li>
+<li>
+<p>noP3 Strict: 4-9 significant (40-55% filtered out for staying in same quadrant)</p>
+</li>
+<li>
+<p><strong>Global direction bias is not significant in any anchor</strong>: The 61.5% increasing proportion does not differ significantly from 50%</p>
+</li>
+</ol>
+<h3 id="strict-verdict-summary-by-anchor-nop3">Strict Verdict Summary by Anchor (noP3)</h3>
+<table>
+<thead>
+<tr>
+<th>Anchor</th>
+<th>Spearman Sig</th>
+<th>Strict Sig</th>
+<th>Filtered Out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P12</td>
+<td>11</td>
+<td>6</td>
+<td>5 (45%)</td>
+</tr>
+<tr>
+<td>P20</td>
+<td>11</td>
+<td>9</td>
+<td>2 (18%)</td>
+</tr>
+<tr>
+<td>P60</td>
+<td>10</td>
+<td>4</td>
+<td>6 (60%)</td>
+</tr>
+</tbody>
+</table>
+<p>The P60 anchor is the most conservative, filtering out the most motifs that show within-quadrant trends.</p>
+<h3 id="final-recommendation">Final Recommendation</h3>
+<p>Results reported using any of the three anchor datasets will yield consistent biological conclusions. The choice of anchor does not materially affect the interpretation that:</p>
+<ul>
+<li><strong>The vast majority of multi-area projection motifs are developmentally stable</strong> (no biologically meaningful change)</li>
+<li>Motifs meeting strict criterion (<strong>am+lm</strong>, <strong>al+am+pm+rsp</strong>, <strong>al+lm+pm+rsp</strong>, <strong>al+am+lm+pm</strong> in P60 noP3) show genuine classification changes</li>
+<li>Many motifs with Spearman-significant trends show <strong>quantitative</strong> but not <strong>qualitative</strong> changes</li>
+<li>P3 represents a distinct early developmental state that introduces trajectory variability</li>
+</ul>
+<hr />
+<h2 id="references">References</h2>
+<p>See Chapter 15 for methodological details and statistical references.</p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>

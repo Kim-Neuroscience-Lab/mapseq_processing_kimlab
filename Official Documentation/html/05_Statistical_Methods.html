@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 5: Statistical Methods</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #3182ce;
+            --light-accent: #90cdf4;
+            --bg: #ffffff;
+            --code-bg: #1a202c;
+            --code-text: #e2e8f0;
+            --table-border: #cbd5e0;
+            --table-header: #edf2f7;
+            --table-alt: #f7fafc;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 2rem; line-height: 1.7; color: #333; background: var(--bg); }
+        h1 { color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; font-size: 2rem; }
+        h2 { color: var(--secondary); border-bottom: 2px solid var(--light-accent); padding-bottom: 0.3rem; margin-top: 2.5rem; font-size: 1.5rem; }
+        h3 { color: #2b6cb0; margin-top: 1.8rem; font-size: 1.2rem; }
+        h4 { color: #4a5568; margin-top: 1.5rem; font-size: 1.05rem; }
+        code { background: #edf2f7; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.9em; font-family: "SF Mono", Monaco, monospace; }
+        pre { background: var(--code-bg); color: var(--code-text); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; font-size: 0.9em; }
+        th, td { border: 1px solid var(--table-border); padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: var(--table-header); font-weight: 600; color: var(--primary); }
+        tr:nth-child(even) { background: var(--table-alt); }
+        blockquote { border-left: 4px solid var(--accent); margin: 1.5rem 0; padding: 0.5rem 1rem; color: #4a5568; background: #f7fafc; border-radius: 0 8px 8px 0; }
+        hr { border: none; border-top: 2px solid #e2e8f0; margin: 2.5rem 0; }
+        .mermaid { background: #f7fafc; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; text-align: center; }
+        strong { color: var(--secondary); }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.3rem 0; }
+        .MathJax { font-size: 1.1em !important; }
+        .nav { background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+        @media print { body { max-width: 100%; padding: 1rem; } pre { white-space: pre-wrap; } }
+    </style>
+</head>
+<body>
+<h1 id="chapter-5-statistical-methods">Chapter 5: Statistical Methods</h1>
+<h2 id="overview">Overview</h2>
+<p>This chapter describes the statistical methods used in the MAPseq processing pipeline, including population estimation, binomial testing, multiple testing correction, and effect size calculation.</p>
+<h2 id="population-estimation-n0">Population Estimation (N₀)</h2>
+<h3 id="the-problem">The Problem</h3>
+<p>We observe <strong>N_obs</strong> neurons that project to at least one target region. However, some neurons may project only to regions we did not sample, meaning the true population <strong>N₀ ≥ N_obs</strong>.</p>
+<h3 id="mathematical-model">Mathematical Model</h3>
+<p>Let <strong>sₖ</strong> = number of neurons observed projecting to region k (for k = 0, 1, ..., m regions).</p>
+<p>We model the probability that a neuron is detected (projects to ≥1 sampled region) as:</p>
+<p>$$\pi = 1 - \prod_{k=0}^{m}\left(1 - \frac{s_k}{N_0}\right)$$</p>
+<p><strong>Interpretation:</strong><br />
+- Each term $\frac{s_k}{N_0}$ is the probability a neuron projects to region k<br />
+- $\prod(1 - \frac{s_k}{N_0})$ is the probability of projecting to <em>no</em> regions (under independence)<br />
+- $\pi$ is therefore the probability of being detected</p>
+<h3 id="solving-for-n0">Solving for N₀</h3>
+<p>We solve the constraint equation:</p>
+<p>$$\pi \cdot N_0 = N_{obs}$$</p>
+<p>This is a polynomial equation in N₀ (degree = number of regions + 1). We use symbolic algebra (SymPy) to find roots and select the <strong>largest real root &gt; N_obs</strong>.</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">solve_for_roots</span><span class="p">(</span><span class="n">projections</span><span class="p">,</span> <span class="n">observed_cells</span><span class="p">):</span>
+    <span class="n">N0</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s1">&#39;N_0 k&#39;</span><span class="p">)</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">projections</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">Array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">projections</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+    <span class="n">pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Product</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="n">N0</span><span class="p">)),</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span><span class="o">.</span><span class="n">doit</span><span class="p">())</span>
+    <span class="n">soln</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">pi</span> <span class="o">*</span> <span class="n">N0</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">)</span>
+    <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span><span class="n">N</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">as_real_imag</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">soln</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">roots</span><span class="p">,</span> <span class="n">pi</span>
+
+<span class="c1"># Root selection (in main script after solve_for_roots)</span>
+<span class="n">valid_N0</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span> <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">is_real</span> <span class="ow">and</span> <span class="n">root</span> <span class="o">&gt;</span> <span class="n">observed_cells</span><span class="p">]</span>
+<span class="n">N0_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">valid_N0</span><span class="p">)</span>  <span class="c1"># Largest valid root</span>
+</code></pre></div>
+
+<h3 id="key-assumption">Key Assumption</h3>
+<p><strong>Independence:</strong> Projections to different regions are statistically independent. This may not hold biologically if certain projection patterns co-occur—which is why we developed Model 3 (Correlated Binomial). See <a href="06_Probability_Models.html">Chapter 6: Probability Models</a> for details.</p>
+<h2 id="binomial-testing-framework">Binomial Testing Framework</h2>
+<h3 id="test-structure">Test Structure</h3>
+<p>For each motif, we perform a two-tailed binomial test:</p>
+<p><strong>Null Hypothesis</strong>: Observed motif count follows a binomial distribution with:<br />
+- <strong>n</strong> = N₀ (estimated total population)<br />
+- <strong>p</strong> = P(motif) from probability model<br />
+- <strong>k</strong> = observed count for motif</p>
+<p><strong>Alternative Hypothesis</strong>: Observed count differs significantly from expected.</p>
+<h3 id="test-implementation">Test Implementation</h3>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (binomial testing)</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">binomtest</span>
+
+<span class="n">p_value</span> <span class="o">=</span> <span class="n">binomtest</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">observed</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">N0_value</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="mf">1e-10</span><span class="p">))</span><span class="o">.</span><span class="n">pvalue</span>
+</code></pre></div>
+
+<p><strong>Note</strong>: The test uses N₀ (estimated population), not N_obs (observed cells). This accounts for neurons that may project only to unsampled regions.</p>
+<h3 id="two-tailed-test">Two-Tailed Test</h3>
+<p>The binomial test is two-tailed, meaning it tests for both over-representation and under-representation:</p>
+<ul>
+<li><strong>Over-representation</strong>: Observed &gt; Expected</li>
+<li><strong>Under-representation</strong>: Observed &lt; Expected</li>
+</ul>
+<h2 id="multiple-testing-correction">Multiple Testing Correction</h2>
+<h3 id="bonferroni-correction">Bonferroni Correction</h3>
+<p>With multiple motifs tested simultaneously, we apply Bonferroni correction to control family-wise error rate:</p>
+<p>$$\alpha_{corrected} = \frac{\alpha}{n_{motifs}}$$</p>
+<p>Where:<br />
+- $\alpha$ = significance threshold (default: 0.05)<br />
+- $n_{motifs}$ = number of motifs tested</p>
+<p><strong>Example</strong>: With 32 motifs and α = 0.05:<br />
+$$\alpha_{corrected} = \frac{0.05}{32} \approx 0.00156$$</p>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (significance grouping)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">bonferroni_thr</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="significance-criteria">Significance Criteria</h3>
+<p>A motif is considered <strong>significant</strong> if:<br />
+$$p\text{-value} &lt; \alpha_{corrected}$$</p>
+<h2 id="effect-size-calculation">Effect Size Calculation</h2>
+<h3 id="formula">Formula</h3>
+<p>Effect size quantifies the magnitude of deviation from model expectations:</p>
+<p>$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (effect size calculation)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">effect_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">((</span><span class="n">observed</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">expected</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="interpretation">Interpretation</h3>
+<table>
+<thead>
+<tr>
+<th>Effect Size</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt; 0</td>
+<td>Motif is <strong>over-represented</strong> (observed &gt; expected)</td>
+</tr>
+<tr>
+<td>&lt; 0</td>
+<td>Motif is <strong>under-represented</strong> (observed &lt; expected)</td>
+</tr>
+<tr>
+<td>≈ 0</td>
+<td>Motif frequency matches expectation</td>
+</tr>
+<tr>
+<td>&gt; 1.0</td>
+<td>Large over-representation (2× expected)</td>
+</tr>
+<tr>
+<td>&lt; -1.0</td>
+<td>Large under-representation (&lt; 0.5× expected)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudocount">Pseudocount</h3>
+<p>The +1 pseudocount prevents:<br />
+- Division by zero (when Expected = 0)<br />
+- Log of zero (when Observed = 0)</p>
+<h2 id="significance-grouping">Significance Grouping</h2>
+<p>Motifs are classified into 4 groups based on effect size and significance:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Description</th>
+<th>Criteria</th>
+<th>Color (plots)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Significantly over-represented</td>
+<td>Effect &gt; 0 AND p &lt; α_corrected</td>
+<td>Red</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Significantly under-represented</td>
+<td>Effect ≤ 0 AND p &lt; α_corrected</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Non-significantly over-represented</td>
+<td>Effect &gt; 0 AND p ≥ α_corrected</td>
+<td>Black</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Non-significantly under-represented</td>
+<td>Effect ≤ 0 AND p ≥ α_corrected</td>
+<td>Black</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (significance grouping)</p>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">effect_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># over-represented</span>
+    <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">bonferroni_thr</span><span class="p">:</span>  <span class="c1"># statistically significant</span>
+        <span class="n">grp</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># significant + over-represented</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grp</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># non-significant + over-represented</span>
+<span class="k">else</span><span class="p">:</span>  <span class="c1"># under-represented</span>
+    <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">bonferroni_thr</span><span class="p">:</span>  <span class="c1"># statistically significant</span>
+        <span class="n">grp</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># significant + under-represented</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grp</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># non-significant + under-represented</span>
+</code></pre></div>
+
+<h2 id="anchor-model-system">Anchor Model System</h2>
+<h3 id="purpose">Purpose</h3>
+<p>The anchor model system enables <strong>cross-age comparative analysis</strong> by establishing P60 (adult) as the baseline for comparing developmental cohorts (P3, P12, P20).</p>
+<h3 id="mathematical-formulation">Mathematical Formulation</h3>
+<p>For a developmental cohort (e.g., P3):</p>
+<p>$$Expected_{motif} = P_{P60}(motif) \times N_0^{P3}$$</p>
+<p>Where:<br />
+- <strong>P_P60(motif)</strong> = probability of motif from P60 anchor model<br />
+- <strong>N₀^P3</strong> = estimated population size for P3 cohort</p>
+<h3 id="key-insight">Key Insight</h3>
+<p>This separates <strong>what projection patterns are biologically "expected"</strong> (from P60 adult baseline) from <strong>how many neurons exist in each developmental stage</strong> (local N₀). Deviations indicate developmental differences in projection patterns.</p>
+<p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::load_anchor_model()</code></p>
+<h2 id="statistical-assumptions">Statistical Assumptions</h2>
+<h3 id="model-assumptions">Model Assumptions</h3>
+<ol>
+<li><strong>Independence</strong> (Models 1 &amp; 2): Projections to different regions are independent</li>
+<li><strong>Binomial Distribution</strong>: Motif counts follow binomial distribution</li>
+<li><strong>Population Estimation</strong>: N₀ estimation assumes independence (may not hold biologically)</li>
+</ol>
+<h3 id="violations-and-alternatives">Violations and Alternatives</h3>
+<ul>
+<li><strong>Correlated Projections</strong>: Model 3 (Correlated Binomial) accounts for pairwise correlations</li>
+<li><strong>Model Misspecification</strong>: Multiple models tested to assess robustness</li>
+<li><strong>Non-Binomial Distributions</strong>: Consider alternative models (negative binomial, zero-inflated)</li>
+</ul>
+<h2 id="helper-script-statistical-methods">Helper Script Statistical Methods</h2>
+<h3 id="kruskal-wallis-test">Kruskal-Wallis Test</h3>
+<p><strong>Script</strong>: <code>01_motif_analysis_per_animal.py</code></p>
+<p><strong>Purpose</strong>: Non-parametric test comparing motif frequencies across age groups</p>
+<p><strong>Null Hypothesis</strong>: No difference in motif frequency distributions across ages</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">kruskal</span>
+<span class="n">h_stat</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">kruskal</span><span class="p">(</span><span class="o">*</span><span class="n">valid_groups</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="fishers-exact-test">Fisher's Exact Test</h3>
+<p><strong>Script</strong>: <code>07_motif_significange_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Tests significance of transitions between consecutive stages</p>
+<p><strong>Null Hypothesis</strong>: No change in motif representation between stages</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">fisher_exact</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">fisher_exact</span><span class="p">([[</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">],</span> <span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">]])</span>
+</code></pre></div>
+
+<h3 id="jensen-shannon-divergence">Jensen-Shannon Divergence</h3>
+<p><strong>Scripts</strong>: <code>01_motif_analysis_per_animal.py</code>, <code>05_motif_analysis.py</code></p>
+<p><strong>Purpose</strong>: Measures distribution similarity between ages</p>
+<p><strong>Range</strong>: 0 (identical) to 1 (maximally different)</p>
+<p><strong>Interpretation</strong>:<br />
+- JSD &lt; 0.05: Very similar distributions (stable)<br />
+- JSD 0.05-0.2: Moderate difference<br />
+- JSD &gt; 0.2: Large difference (unstable)</p>
+<p><strong>Code Reference</strong>: Uses <code>scipy.spatial.distance.jensenshannon</code></p>
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Purpose</th>
+<th>Code Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N₀ Estimation</td>
+<td>Population size estimation</td>
+<td><code>solve_for_roots()</code> in process-nbcm-tsv.py</td>
+</tr>
+<tr>
+<td>Binomial Test</td>
+<td>Motif significance testing</td>
+<td><code>binomtest()</code> in process-nbcm-tsv.py</td>
+</tr>
+<tr>
+<td>Bonferroni Correction</td>
+<td>Multiple testing correction</td>
+<td>Lines 800+</td>
+</tr>
+<tr>
+<td>Effect Size</td>
+<td>Magnitude of deviation</td>
+<td>Line 1438</td>
+</tr>
+<tr>
+<td>Anchor Model</td>
+<td>Cross-cohort comparison</td>
+<td><code>load_anchor_model()</code> in process-nbcm-tsv.py</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>For probability model details, see <a href="06_Probability_Models.html">Chapter 6: Probability Models</a>. For mathematical formulas, see <a href="10_Mathematical_Functions.html">Chapter 10: Mathematical Functions Reference</a>.</em></p>
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    document.querySelectorAll('pre code').forEach(block => {
+        if (block.innerText.trim().startsWith('flowchart') || 
+            block.innerText.trim().startsWith('graph') || 
+            block.innerText.trim().startsWith('sequenceDiagram')) {
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.textContent = block.innerText;
+            block.parentElement.replaceWith(div);
+        }
+    });
+</script>
+</body>
+</html>
