@@ -3,8 +3,6 @@ MAPseq processing code based on previous works and designed to be used with the 
 
 Code found here is generally a work in progress until publication.
 
-[![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Fmatsojr22%2Fmapseq_processing_kimlab%2Flines)](https://tokei.kojix2.net/github/matsojr22/mapseq_processing_kimlab)
-
 ## **Before you run:**
 - Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
 - A preprocessing and data aggregation script is provided to prepare a individaul and combined cohort level dataframe for analysis using the per-animal sample.nbcm.tsv files produced by the CSHL pipeline. This script requires the user to match the nbcm header labels to their own sample labels to ensure all the data is correctly aligned when concatenated.
