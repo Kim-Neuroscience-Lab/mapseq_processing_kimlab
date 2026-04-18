@@ -59,9 +59,9 @@
 <li><strong>Status</strong>: Experimental, untested</li>
 </ul>
 <h3 id="usage">Usage</h3>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
-python<span class="w"> </span>MAPseq_Wizard.py
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda activate mapseq_processing
+python MAPseq_Wizard.py
+</code></pre>
 
 <p>The form provides fields for sample name, data file, output directory, labels, filter parameters (injection UMI min, min target count, min body-to-target ratio, target UMI min), alpha, and optional flags (outlier filtering, force user threshold). Preprocessing still requires terminal access.</p>
 <hr />
@@ -73,9 +73,9 @@ python<span class="w"> </span>MAPseq_Wizard.py
 <li><strong>Status</strong>: Experimental, untested</li>
 </ul>
 <h3 id="usage_1">Usage</h3>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
-python<span class="w"> </span>-m<span class="w"> </span>MAPseq_wizard.main
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda activate mapseq_processing
+python -m MAPseq_wizard.main
+</code></pre>
 
 <h3 id="dependencies">Dependencies</h3>
 <ul>
@@ -94,6 +94,32 @@ python<span class="w"> </span>-m<span class="w"> </span>MAPseq_wizard.main
 <li><strong>Execute</strong> - Run the pipeline with progress monitoring</li>
 </ol>
 <p>For more detail, see the <a href="../../MAPseq_wizard/README.html">MAPseq_wizard package README</a> in the repository.</p>
+<h3 id="wizard-helper-checklist-vs-full-repository">Wizard helper checklist vs full repository</h3>
+<p>The <strong>Helper Scripts</strong> step in <code>MAPseq_wizard</code> exposes only a <strong>subset</strong> of helpers (e.g. 01–09, 13, 15 with dependency hints). It does <strong>not</strong> mirror every script under <code>helpers/scripts/</code> (e.g. optional <strong>17</strong> / <strong>18</strong>, per-cell projection plot <strong>10</strong>, model comparison <strong>14</strong>, or maintainer tools below). For the full list and batch order, use <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a> and your edited <code>all_commands.txt</code>.</p>
+<hr />
+<h2 id="maintainer-and-lab-batch-utilities-not-required-for-standard-mapseq">Maintainer and lab batch utilities (not required for standard MAPseq)</h2>
+<p>These tools are <strong>optional</strong>. They are kept in the repository for lab workflows; end users can ignore them unless needed.</p>
+<h3 id="teleporting-batch-barcode-qc">Teleporting / batch barcode QC</h3>
+<ul>
+<li><strong><code>helpers/scripts/00_teleporting_barcode_detection.py</code></strong> — Sequencing-batch vs animal mapping and related QC plots. Hardcoded mappings are project-specific; read the script before running.</li>
+</ul>
+<h3 id="dataset-comparison-helpers-external-data">Dataset comparison helpers (external data)</h3>
+<ul>
+<li><strong><code>helpers/scripts/10_compare_datasets_pipeline.py</code></strong> — Two-way pipeline comparison (external datasets).</li>
+<li><strong><code>helpers/scripts/11_compare_vsv_mapseq_two_way.py</code></strong> — VSV vs MapSeq.</li>
+<li><strong><code>helpers/scripts/12_compare_datasets_pipeline_mapseq.py</code></strong> — Three-way (e.g. Allen / VSV / MapSeq).</li>
+</ul>
+<h3 id="power-and-manuscript-ancillary-analyses">Power and manuscript ancillary analyses</h3>
+<ul>
+<li><strong><code>helpers/scripts/16_power_analysis.py</code></strong> — Power / equivalence style analyses tied to manuscript claims; depends on other helper outputs. Run with <code>--help</code> for current arguments.</li>
+</ul>
+<h3 id="figure-aggregation-multi-panel-tiff-matrices">Figure aggregation (multi-panel TIFF / matrices)</h3>
+<ul>
+<li><strong><code>figure_generation/generate_figure_from_outputs.py</code></strong> — Builds multi-panel figures from existing pipeline outputs (e.g. by age). Not part of the core statistical pipeline; run only if you maintain that figure workflow.</li>
+<li>Other scripts under <code>figure_generation/</code> may exist for one-off exports; use <code>--help</code> per script.</li>
+</ul>
+<h3 id="conclusions-generation-lab-reports">Conclusions generation (lab reports)</h3>
+<p>Scripts under <strong><code>conclusions/scripts/</code></strong> (e.g. <code>extract_stability_data.py</code>, <code>generate_conclusions.py</code>) read processed outputs and write markdown/HTML conclusions for this repository’s stability narrative. Paths and arguments change with the repo; inspect the scripts and <a href="../../bash/all_commands.txt"><code>bash/all_commands.txt</code></a> for the current invocation. These are <strong>not</strong> general MAPseq user requirements.</p>
 <hr />
 <h2 id="recommendation">Recommendation</h2>
 <p>For production and reproducible runs, use <strong><code>./run_commands.sh</code></strong> (after <code>chmod +x run_commands.sh</code> if needed) with an edited command file (<code>all_commands.txt</code> or <code>all_commands_all-parameters.txt</code>) as described in Chapters 1, 2, and 4.</p>

@@ -2,593 +2,278 @@
 
 ## Overview
 
-After running the main processing pipeline (`process-nbcm-tsv.py`), helper scripts perform cross-age analyses, temporal comparisons, and visualization. These scripts are numbered by their execution order and have specific dependencies.
+After main processing (`process-nbcm-tsv.py`), **helper scripts** perform cross-age analyses and plots. Outputs live under:
 
-## Execution Order and Dependencies
+`02_output/{parameterization}_helpers/{NN_script_name}/`
+
+where `{parameterization}` matches your main output folder (e.g. `05.HAN_filter_parameters_i300_r10_t10_u5`). Paths in your tree may use a `_helpers` suffix on that folder name (e.g. `05.HAN_..._helpers`).
+
+### Core vs optional (end users)
+
+| Tier | Scripts | Notes |
+|------|---------|--------|
+| **Core** | 01–06, 07 (with prepared `07_input`), 08, 09, 15; often 13 | Typical developmental / trajectory workflow. |
+| **Often in repo command file** | 17, 18, `10_plot_per_cell_projection_strength_across_ages.py` | Extra summaries or plots; depend on 01 and/or 05. |
+| **Maintainer / lab-only** | 00, `10_compare_datasets_pipeline.py`, 11, 12, 16 | Barcode QC, external dataset compares, manuscript power analysis. See [Chapter 14](14_Experimental_Features.md). |
+
+The **MAPseq_wizard** GUI lists only a subset of helpers; the authoritative list is this chapter and your edited `all_commands.txt`.
+
+## Dependency graph (core)
 
 ```mermaid
 flowchart TD
-    Main[Main Processing<br/>process-nbcm-tsv.py] --> S01[Script 01:<br/>Per-animal Analysis]
-    Main --> S02[Script 02:<br/>Projection Analysis]
-    Main --> S03[Script 03:<br/>Composition]
-    Main --> S04[Script 04:<br/>Proportions Over Time]
-    Main --> S05[Script 05:<br/>Motif Analysis]
-    S05 --> S06[Script 06:<br/>Motif Divergence]
-    S05 --> S07[Script 07:<br/>Trajectories]
-    S07 --> S08[Script 08:<br/>Motif Clustering]
-    S07 --> S15[Script 15:<br/>Volcano Trajectories]
-    Main --> S09[Script 09:<br/>Projection Strength]
-    Main --> S13[Script 13:<br/>Aggregation]
-    Main --> S14[Script 14:<br/>Model Comparison]
+    Main[process-nbcm-tsv.py] --> S01[01 per-animal]
+    Main --> S02[02 projection]
+    Main --> S03[03 composition]
+    Main --> S04[04 proportions]
+    Main --> S05[05 motif analysis]
+    S05 --> S06[06 motif divergence]
+    S05 --> S07[07 trajectories]
+    S07 --> S08[08 clustering]
+    S07 --> S15[15 volcano trajectories]
+    Main --> S09[09 projection strength]
 ```
 
-**Critical Dependencies:**
-- Script 05 must run before scripts 06 and 07
-- Script 07 must run before script 08
-- Script 15 (volcano trajectories) requires script 07; quadrant-filtered summaries use `transition_significance.csv` from helper 07 (path inferred from helper output dir)
-- All scripts require main processing to complete first
+**Critical**: Run **05** before **06** and **07**. Run **07** before **08** and **15**. Helper **15** reads upsetplot CSVs from `--input_dir` (often a copied `07_input` tree); see your command file for `find`/`cp` steps.
+
+## Example batch order
+
+The repository’s [`bash/all_commands.txt`](../../bash/all_commands.txt) is the reference ordering for this project. A typical block (after all `process-nbcm-tsv.py` runs) is:
+
+1. **01**–**05** — cross-age tables and motif summaries  
+2. **18** — mean JSD transition tests (reads helper **05** text outputs); optional  
+3. **06** — divergence plots (needs **05**)  
+4. **17** — cross-source JSD summary (needs **01** and **05**); optional  
+5. Prepare **`07_input`**: copy aggregate `*_upsetplot_*.csv` files for models you want trajectories for  
+6. **07** — trajectories (reads `07_input`)  
+7. **15** — volcano trajectories (same `07_input` dir)  
+8. **08**, **09** — clustering and projection-strength plots  
+9. **`10_plot_per_cell_projection_strength_across_ages.py`** — per-cell lines across ages (optional visualization)  
+10. **13** — aggregate `projection_summary.csv` across parameterizations (often once at end)  
+11. **16** — power / manuscript analyses (maintainer; see Chapter 14)
+
+Adjust paths to your `02_output` root.
+
+---
 
 ## Script 01: Per-Animal Motif Analysis
 
 **File**: `helpers/scripts/01_motif_analysis_per_animal.py`
 
-**Purpose**: High-level statistical analysis of motif frequency changes across timepoints, accounting for individual animal variation.
+**Purpose**: Motif frequency variation across ages with per-animal replication (Kruskal-Wallis, JSD, plots).
 
-### Statistical Tests
+**Outputs**: `02_output/{parameterization}_helpers/01_motif_analysis_per_animal/{model}/`
 
-**Kruskal-Wallis Test**:
-- Non-parametric test comparing motif frequencies across 4 timepoints (P3, P12, P20, P60)
-- Null hypothesis: No difference in motif frequency distributions across ages
-- Interpretation: p < 0.05 indicates significant change over time
-- Advantages: Non-parametric, handles non-normal data, multiple groups
-
-**Jensen-Shannon Divergence (JSD)**:
-- Measures distribution similarity between ages
-- Range: 0 (identical) to 1 (maximally different)
-- Interpretation: JSD > 0.05 suggests meaningful difference
-- Advantages: Symmetric, bounded, interpretable
-
-**Global vs Domain-wise Normalization**:
-- Global: Compares entire frequency distributions across all motifs
-- Domain-wise: Compares within each motif complexity level (degree)
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/01_motif_analysis_per_animal/{model}/`
-
-- Bar plots with SEM across animals per timepoint
-- Kruskal-Wallis results (CSV/text)
-- JSD comparison matrices
-- Cross-age comparison plots (global and domain-wise normalization)
-
-### Questions Answered
-
-- Do motif frequencies change significantly across ages? (Kruskal-Wallis)
-- Which motifs show the most dramatic changes? (Effect sizes, JSD)
-- Are changes consistent across animals? (SEM, individual animal data)
-- Are changes uniform across all complexity levels? (Domain-wise analysis)
-
-**Most Important for Stability Analysis**: ✅ **PRIMARY SCRIPT** - Directly tests temporal stability
+---
 
 ## Script 02: Projection Analysis
 
 **File**: `helpers/scripts/02_projection_analysis.py`
 
-**Purpose**: PCA and clustering analysis of projection patterns (not directly temporal).
+**Purpose**: PCA / clustering on projection patterns (not motif-significance testing).
 
-### Methods
+**Outputs**: `02_output/{parameterization}_helpers/02_projection_analysis/`
 
-- **Principal Component Analysis (PCA)**: Dimensionality reduction
-- **Hierarchical Clustering**: Groups similar projection patterns
-- **Heatmaps**: Visualize projection pattern similarities
+---
 
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/02_projection_analysis/`
-
-- PCA plots comparing age groups
-- Hierarchical clustering dendrograms
-- Heatmaps of projection patterns
-
-**Most Important for Stability Analysis**: ❌ **NOT TEMPORAL** - Cross-age comparisons only
-
-## Script 03: Composition Analysis
+## Script 03: Composition
 
 **File**: `helpers/scripts/03_composition.py`
 
-**Purpose**: Composition analysis by age (UMI and projection counts).
+**Purpose**: UMI and projection count composition by age.
 
-### Methods
+**Outputs**: `02_output/{parameterization}_helpers/03_composition/`
 
-- Descriptive statistics
-- Composition plots by age
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/03_composition/`
-
-- UMI composition plots by age
-- Projection count composition plots by age
-
-**Most Important for Stability Analysis**: ⚠️ **DESCRIPTIVE** - Provides context but not statistical tests
+---
 
 ## Script 04: Proportions Over Time
 
 **File**: `helpers/scripts/04_proportions_over_time_stats.py`
 
-**Purpose**: Analyze proportions of target types (1-7 targets) across ages.
+**Purpose**: Target-count-type proportions across ages; chi-square / CLR-related outputs.
 
-### Statistical Tests
+**Outputs**: `02_output/{parameterization}_helpers/04_proportions_over_time_stats/`
 
-**Chi-square Test of Independence**:
-- Tests if target type proportions are independent of age
-- Null hypothesis: Proportions are independent of age
-- Advantages: Good for categorical/count data
-
-**CLR (Centered Log-Ratio) Transformation**:
-- Compositional data transformation
-- PCA on CLR Data: Dimensionality reduction of compositional changes
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/04_proportions_over_time_stats/`
-
-- `chi_square_summary.csv`: Chi-square test results
-- `compositional_proportions.csv`: Proportions by age and target type
-- `clr_transformed_data.csv`: CLR-transformed data
-- Stacked bar plots and line plots of proportions
-- CLR PCA plot
-- Chi-square residuals heatmap
-
-**Most Important for Stability Analysis**: ⚠️ **DESCRIPTIVE** - Analyzes target count distributions, not motif-specific
+---
 
 ## Script 05: Motif Analysis
 
 **File**: `helpers/scripts/05_motif_analysis.py`
 
-**Purpose**: Cross-age motif percentage analysis with distribution comparisons.
+**Purpose**: Cross-age motif percentages, transition text summaries, matrices. **Required** before **06** and **07**.
 
-**⚠️ REQUIRED** for scripts 06 and 07.
+**Outputs**: `02_output/{parameterization}_helpers/05_motif_analysis/`  
+Key files: `motif_percent_matrix_by_age_{model}.csv`, `motif_transition_significance_summary_{model}.txt`
 
-### Statistical Tests
-
-**Welch's t-test**:
-- Compares motif percentages between two ages (handles unequal variances)
-
-**Kolmogorov-Smirnov Test**:
-- Compares entire distributions between ages
-- Null hypothesis: Distributions are identical
-- Advantages: Non-parametric, sensitive to shape differences
-
-**Jensen-Shannon Divergence**:
-- Distribution similarity metric
-
-**Hierarchical Clustering**:
-- Groups motifs by temporal patterns
-
-**PCA + KMeans**:
-- Dimensionality reduction and clustering of temporal patterns
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/05_motif_analysis/`
-
-- `motif_percent_matrix_by_age_{model}.csv`
-  - Rows: Motifs, Columns: Ages (P12, P20, P60)
-  - Values: Percentage of observed motifs
-- `motif_transition_significance_summary_{model}.txt`
-  - Per-motif transition comparisons with JSD and significance flags
-- `histogram_similarity_summary_{model}.txt`
-  - Degree-wise comparisons with Welch's t-test, KS test, and JSD
-- PDF plots: Motif percentage barplots by age (sorted and by rank)
-- Clustering heatmaps and PCA plots
-
-**Most Important for Stability Analysis**: ✅ **SECONDARY SCRIPT** - Provides detailed transition analysis
+---
 
 ## Script 06: Motif Divergence
 
 **File**: `helpers/scripts/06_all_motif_divergence.py`
 
-**Purpose**: Visualize divergence patterns across age transitions.
+**Purpose**: JS divergence bar plots per transition (needs **05**).
 
-**⚠️ REQUIRES** Script 05.
+**Outputs**: `02_output/{parameterization}_helpers/06_all_motif_divergence/{model}/`
 
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/06_all_motif_divergence/{model}/`
-
-- `divergence_{transition}_{model}.svg`: Bar plots of JS divergence per transition
-  - Shows significant (red) vs non-significant (blue) divergences
-  - Transitions: P12vsP20, P20vsP60, P12vsP60
-
-**Most Important for Stability Analysis**: ⚠️ **VISUALIZATION ONLY** - Complements script 05
+---
 
 ## Script 07: Motif Trajectories
 
 **File**: `helpers/scripts/07_motif_significange_trajectories.py`
 
-**Purpose**: Motif-level analysis of effect size trajectories across developmental stages.
+**Purpose**: Effect-size trajectories and **transition z-tests** (log-count delta method; optional FDR for the `Significant` flag). Kruskal-Wallis on n=1 per group was removed as invalid.
 
-**⚠️ REQUIRES** Script 05.
+**Inputs**: `--input_dir` of upsetplot CSVs; `--helper_output_dir` for writes.
 
-### Statistical Tests
+**Outputs**: `02_output/{parameterization}_helpers/07_motif_significange_trajectories/{model}/`  
+Key files: `combined_effect_sizes_{model}.csv`, `transition_significance.csv`
 
-**Transition Z-Test** (Primary Method):
-- Tests whether effect size changed significantly between consecutive stages
-- Uses z-test on difference of log-transformed counts
-- Standard error: SE(d) = 1/(ln(2) × √observed)
-- Null hypothesis: No change in effect size between stages
-- FDR correction applied within each motif across transitions
-- See [Chapter 5: Statistical Methods](05_Statistical_Methods.md) for mathematical details
+**CLI** (common): `--use_fdr_for_significant`, `--exploratory_trend_pvalue`, `--unified_yaxis`
 
-**Effect Size Tracking**:
-- Tracks effect sizes across P3→P12→P20→P60
+Details: [Chapter 5: Statistical Methods](05_Statistical_Methods.md)
 
-**Trend Analysis** (Exploratory Only):
-- Linear regression of effect size on stage index
-- **WARNING**: The trend p-value has very low statistical power with only n=4 points
-- Use slope as descriptive statistic only; do NOT use p-value for formal hypothesis testing
-
-### Methods Removed
-
-**Kruskal-Wallis Test**: Removed in v2.0. The original implementation was statistically invalid because it applied Kruskal-Wallis with n=1 observation per group. Kruskal-Wallis requires multiple observations per group to estimate within-group variance.
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/07_motif_significange_trajectories/{model}/`
-
-- `combined_effect_sizes_{model}.csv`
-  - Columns: `Motif_Label`, `Effect Size`, `Stage`, `Significant`, `Observed`
-- `transition_significance.csv`
-  - Columns: `Motif`, `Transition`, `P-value`, `Significant`, `Delta_Effect_Size`, `SE_delta`, `P_value_adjusted`
-  - **Significant** is by default raw p ≤ 0.05; with `--use_fdr_for_significant` it is FDR-adjusted p ≤ 0.05 (within motif)
-  - Script 15 uses this file for quadrant-filtered summaries
-- `motif_trajectory_summary.csv`
-  - Columns: `Motif`, `trend_slope`, `trend_direction`, `Delta_P3_to_P60`, `Delta_P3_to_P60_SE`, `Delta_P3_to_P60_CI_lower`, `Delta_P3_to_P60_CI_upper`, `Delta_P3_to_P60_p`, `N_stages_significant`
-  - Optional: `trend_p_EXPLORATORY` (only with `--exploratory_trend_pvalue`)
-- Trajectory plots (PDF): Effect size over time for each motif
-
-### CLI / Options
-
-- `--use_fdr_for_significant`: Set **Significant** in `transition_significance.csv` from FDR-adjusted p ≤ 0.05 instead of raw p
-- `--exploratory_trend_pvalue`: Include the exploratory trend p-value in output (WARNING: low power with n=4)
-- `--unified_yaxis`: Use unified y-axis range across all models
-
-**Most Important for Stability Analysis**: ✅ **PRIMARY SCRIPT** - Identifies when changes occur
+---
 
 ## Script 08: Motif Clustering
 
 **File**: `helpers/scripts/08_motif_clustering.py`
 
-**Purpose**: Clustering motifs based on effect size trajectories from script 07.
+**Purpose**: Cluster motifs using helper **07** outputs. **Requires 07**.
 
-**⚠️ REQUIRES** Script 07.
+**Outputs**: `02_output/{parameterization}_helpers/08_motif_clustering/{model}/`
 
-### Methods
-
-- Hierarchical clustering
-- K-means clustering
-- Evaluation metrics (silhouette, Calinski-Harabasz, Davies-Bouldin)
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/08_motif_clustering/{model}/`
-
-- Dendrograms
-- Clustering heatmaps
-- Motif ordering analysis
-- Evaluation metrics
-
-**Most Important for Stability Analysis**: ⚠️ **EXPLORATORY** - Groups motifs but doesn't test stability
+---
 
 ## Script 09: Projection Strength Visualization
 
 **File**: `helpers/scripts/09_plot_normalized_projection_strength_data.py`
 
-**Purpose**: Visualize normalized projection strength data.
+**Purpose**: Normalized projection strength figures.
 
-### Key Outputs
+**Outputs**: `02_output/{parameterization}_helpers/09_plot_normalized_projection_strength_data/`
 
-**Location**: `02_output/{parameterization}_helpers/09_plot_normalized_projection_strength_data/`
+---
 
-- Projection strength plots (individual and aggregate)
+## Script 10 (command file): Per-cell projection strength across ages
 
-**Most Important for Stability Analysis**: ⚠️ **VISUALIZATION ONLY**
+**File**: `helpers/scripts/10_plot_per_cell_projection_strength_across_ages.py`
 
-## Script 10: Dataset Comparison (Two-way)
+**Purpose**: One plot per motif with per-cell lines across p12/p20/p60 (reads `*ALL*_raw_data.csv` under each age).
 
-**File**: `helpers/scripts/10_compare_datasets_pipeline.py`
+**Status**: Optional visualization; appears in the repository `bash/all_commands.txt` as the script named `10_...` (not the dataset-compare script below).
 
-**Purpose**: Two-way dataset comparison (requires external datasets).
-
-**Status**: Optional, typically commented out in `all_commands.txt`
-
-## Script 11: VSV vs MapSeq Comparison
-
-**File**: `helpers/scripts/11_compare_vsv_mapseq_two_way.py`
-
-**Purpose**: VSV vs MapSeq comparison (requires external datasets).
-
-**Status**: Optional, typically commented out in `all_commands.txt`
-
-## Script 12: Three-way Dataset Comparison
-
-**File**: `helpers/scripts/12_compare_datasets_pipeline_mapseq.py`
-
-**Purpose**: Three-way comparison (Allen, VSV, MapSeq) (requires external datasets).
-
-**Status**: Optional, typically commented out in `all_commands.txt`
+---
 
 ## Script 13: Aggregate Projection Summaries
 
 **File**: `helpers/scripts/13_aggregate_projection_summaries.py`
 
-**Purpose**: Aggregate projection summary data across all parameterizations.
+**Purpose**: Collect `projection_summary.csv` across ages/parameterizations.
 
-### Methods
+**Outputs**: Under your chosen `--helper_output_dir` (see command file).
 
-- Finds all `projection_summary.csv` files in output directories
-- Filters for aggregate samples (containing "_ALL_" in sample name)
-- Extracts metadata (age, parameterization) from file paths
-- Combines all summaries into a single CSV file
-
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/13_aggregate_projection_summaries/` or repository root
-
-- Combined projection summary CSV with metadata columns
-
-**Most Important for Stability Analysis**: ❌ **AGGREGATION ONLY** - Not for temporal analysis
+---
 
 ## Script 14: Model Group Comparison
 
 **File**: `helpers/scripts/14_model_group_comparison.py`
 
-**Purpose**: Compare results across different probability models.
+**Purpose**: Compare uniform / region_specific / correlated (and related) outputs.
 
-### Methods
+**Outputs**: `02_output/{parameterization}_helpers/14_model_group_comparison/`
 
-- Compares uniform, region-specific, and correlated models
-- Generates comparison plots and statistics
+---
 
-### Key Outputs
-
-**Location**: `02_output/{parameterization}_helpers/14_model_group_comparison/`
-
-- Model comparison plots
-- Agreement statistics
-
-## Script 15: Volcano Trajectories (v2.0)
+## Script 15: Volcano Trajectories
 
 **File**: `helpers/scripts/15_volcano_trajectories.py`
 
-**Purpose**: Per-motif volcano trajectory plots (effect size vs −log₁₀(P)) across P3/P12/P20/P60 with unified axes, implementing multiple citable statistical methods for identifying trajectories that change significantly over time.
+**Purpose**: Volcano-style trajectory plots and optional permutation, FDA, mixed-effects, distance, and legacy quadrant summaries.
 
-**⚠️ REQUIRES** Script 07 (for transition_significance.csv; path inferred from helper output dir).
+**Requires**: Upsetplot inputs (`--input_dir`); for quadrant filtering, helper **07** `transition_significance.csv` when paths are configured.
 
-### Statistical Methods (v2.0)
+**Outputs**: `02_output/{parameterization}_helpers/15_volcano_trajectories/{model}/` (subfolders `permutation/`, `fda/`, `method_comparison/`, etc.)
 
-Script 15 now implements multiple publication-ready statistical methods:
+**CLI** (non-exhaustive): `--methods`, `--distance_metrics`, `--bootstrap_ci`, `--permutation_n`, `--input_dir`, `--helper_output_dir`, `--transition_significance_dir`
 
-| Method | Purpose | Citation |
-|--------|---------|----------|
-| Permutation tests | Non-parametric trajectory significance | Good (2005) |
-| FDA trajectory tests | Tests for non-constant trajectories | Ramsay & Silverman (2005) |
-| Mixed-effects models | Population-level stage effects | Bates et al. (2015) |
-| Bootstrap CI | Quadrant classification uncertainty | Efron & Tibshirani (1993) |
-| Z-score distance | Standardized path length | Standard |
-| Mahalanobis distance | Covariance-aware path length | Mahalanobis (1936) |
+File-level reference: [Chapter 8](08_Output_Files_Interpretation.md), [Chapter 15](15_Trajectory_Results_Interpretation.md)
 
-See [Chapter 5: Statistical Methods](05_Statistical_Methods.md) for detailed descriptions and mathematical formulations.
+---
 
-### Legacy Methods (Retained for Compatibility)
+## Scripts 17 and 18 (optional summaries)
 
-- **Quadrant classification**: Bonferroni cutoff; trajectory "changes quadrant" if it has not_sig→sig or sig_pos↔sig_neg. Filtered by transition significance from helper 07.
-- **Centroid 3+1 / 2+1 rule**: Ad-hoc method flagged as non-standard. Retained for backward compatibility but prefer permutation/FDA for publication.
+**17** — `helpers/scripts/17_jsd_cross_source_summary.py`: Homogeneity / cross-source JSD summaries; requires sibling **01** and **05** directories under the same `*_helpers` parent. Read the module docstring for scale warnings (helper 01 global JSD ≠ helper 05 per-motif JS²).
 
-### Output Directory Structure
+**18** — `helpers/scripts/18_mean_jsd_transition_tests.py`: Tests on mean motif-level JS² from helper **05** summaries; requires **05** outputs first.
 
-```
-15_volcano_trajectories/{model}/
-├── per_motif_plots/           # Individual trajectory plots
-│   └── {motif}_volcano_trajectory.{pdf,svg,png}
-├── quadrant_change/           # Quadrant-based summary plots
-│   ├── summary_all_trajectories.{pdf,svg,png}
-│   ├── summary_all_trajectories_not_filtered.{pdf,svg,png}
-│   ├── summary_all_trajectories_no_P3*.{pdf,svg,png}
-│   └── summary_all_trajectories_centroid_dramatic*.{pdf,svg,png}
-├── permutation/               # Permutation test results
-│   └── permutation_test_results.csv
-├── fda/                       # FDA test results
-│   └── fda_trajectory_significance.csv
-├── mixed_effects/             # Mixed-effects model results
-│   ├── mixed_effects_summary.csv
-│   └── mixed_effects_random_effects.csv
-├── bootstrap_ci/              # Bootstrap CI (if enabled)
-│   └── quadrant_bootstrap_ci.csv
-├── distance_metrics/          # Standardized distance metrics
-│   └── distance_comparison.csv
-├── method_comparison/         # Cross-method comparison
-│   ├── all_methods_summary.csv
-│   ├── method_agreement_matrix.csv
-│   └── significant_by_method.csv
-└── change_criteria_comparison.csv  # Legacy comparison file
-```
+---
 
-### Key Output Files
+## Optional dataset comparison scripts (not standard MAPseq)
 
-**permutation/permutation_test_results.csv**:
-- `Motif`, `observed_stat`, `null_mean`, `null_sd`, `p_value`, `p_value_fdr`, `significant`
+These require **external** datasets and are usually absent from minimal command files:
 
-**fda/fda_trajectory_significance.csv**:
-- `Motif`, `fda_statistic`, `null_mean`, `null_sd`, `p_value`, `p_value_fdr`, `significant`
+- `helpers/scripts/10_compare_datasets_pipeline.py` (two-way)  
+- `helpers/scripts/11_compare_vsv_mapseq_two_way.py`  
+- `helpers/scripts/12_compare_datasets_pipeline_mapseq.py` (three-way)
 
-**mixed_effects/mixed_effects_summary.csv**:
-- `stage_coefficient`, `stage_pvalue`, `model_converged`
+See [Chapter 14: Experimental Features](14_Experimental_Features.md).
 
-**distance_metrics/distance_comparison.csv**:
-- `Motif`, `path_length_raw`, `path_length_zscore`, `path_length_mahalanobis`
-- `effect_size_range`, `effect_size_sd`, `effect_size_total_variation`
-- `significance_range`, `significance_sd`, `significance_total_variation`
-- Percentile ranks (`*_pct`) for all metrics
+---
 
-**method_comparison/all_methods_summary.csv**:
-- One row per motif with results from all methods
-- `quadrant_change`, `quadrant_change_filtered`, `centroid_dramatic`
-- `permutation_pvalue`, `permutation_pvalue_fdr`, `permutation_significant`
-- `fda_pvalue`, `fda_pvalue_fdr`, `fda_significant`
-- Distance metrics
-
-**method_comparison/method_agreement_matrix.csv**:
-- Pairwise agreement rates (%) between methods
-
-### CLI Options
-
-**Input/Output:**
-- `--input_dir` (required): Directory of upsetplot CSVs
-- `--helper_output_dir`: Output directory
-- `--transition_significance_dir`: Helper 07 output for transition_significance.csv
-- `--model_type`: Single model to process (default: all supported models)
-
-**Plot Options:**
-- `--no_volcano_ylim`: Use symmetric y-axis instead of [0, max]
-- `--no_comparison_list`: Do not write change_criteria_comparison.csv
-
-**Statistical Method Selection:**
-- `--methods {all,quadrant,permutation,fda,mixed,none}`: Which methods to run (default: all)
-- `--distance_metrics {all,none}`: Which distance metrics to compute (default: all)
-- `--bootstrap_ci`: Enable bootstrap CI (slow, disabled by default)
-- `--bootstrap_n INT`: Number of bootstrap samples (default: 1000)
-- `--permutation_n INT`: Number of permutations (default: 10000)
-- `--no_method_comparison`: Do not generate method comparison files
-
-### Example Usage
-
-```bash
-# Run all methods (default)
-python helpers/scripts/15_volcano_trajectories.py \
-    --input_dir 02_output/p60_anchor/05.HAN.../07_input
-
-# Run only permutation tests (faster)
-python helpers/scripts/15_volcano_trajectories.py \
-    --input_dir 02_output/p60_anchor/05.HAN.../07_input \
-    --methods permutation
-
-# Include bootstrap CI (slow but informative)
-python helpers/scripts/15_volcano_trajectories.py \
-    --input_dir 02_output/p60_anchor/05.HAN.../07_input \
-    --bootstrap_ci --bootstrap_n 2000
-```
-
-**Most Important for Stability Analysis**: ✅ **PRIMARY SCRIPT** for trajectory significance testing. Use permutation or FDA results for publication; method_comparison files show robustness.
-
-## Running Helper Scripts
-
-### Individual Execution
-
-Helper scripts can be run from the repository root or from the `helpers/` directory:
+## Running helpers
 
 ```bash
 # From repository root
-python helpers/scripts/01_motif_analysis_per_animal.py
-python helpers/scripts/02_projection_analysis.py
-# ... etc
-
-# Or from helpers directory
-cd helpers
-python scripts/01_motif_analysis_per_animal.py
-python scripts/02_projection_analysis.py
-# ... etc
+python helpers/scripts/01_motif_analysis_per_animal.py --help
 ```
 
-### Batch Execution
+Batch mode: list commands in `all_commands.txt` and run `./run_commands.sh` from the repo root (see [Chapter 4](04_Main_Processing_Pipeline.md)).
 
-Use `all_commands.txt` or `all_commands_all-parameters.txt` in the repository root. From the repository root, make the script executable if needed (`chmod +x run_commands.sh`), then run:
-
-```bash
-./run_commands.sh
-```
-
-The script reads the command file line by line and executes each command in order; output is logged to a timestamped file. A copy of `run_commands.sh` may also exist in the `bash/` subdirectory (use `chmod +x bash/run_commands.sh` and `./bash/run_commands.sh` if using that copy). You can also run commands from `all_commands.txt` manually.
-
-## Output Directory Structure
-
-All script outputs are organized in `helpers/outputs/` with numbered subdirectories:
+## Output directory structure (reference)
 
 ```
 02_output/{parameterization}_helpers/
 ├── 01_motif_analysis_per_animal/
-│   └── {model}/
 ├── 02_projection_analysis/
 ├── 03_composition/
 ├── 04_proportions_over_time_stats/
 ├── 05_motif_analysis/
 ├── 06_all_motif_divergence/
-│   └── {model}/
+├── 07_input/                    # prepared upsetplot CSVs (not a .py script)
 ├── 07_motif_significange_trajectories/
-│   └── {model}/
 ├── 08_motif_clustering/
-│   └── {model}/
 ├── 09_plot_normalized_projection_strength_data/
 ├── 13_aggregate_projection_summaries/
 ├── 14_model_group_comparison/
-└── 15_volcano_trajectories/
-    └── {model}/
-        ├── summary_* (quadrant and centroid 3+1/2+1 highlight modes)
-        ├── change_criteria_comparison.csv (quadrant vs centroid vs path_length/range)
-        └── per-motif trajectory plots
+├── 15_volcano_trajectories/
+├── 17_jsd_cross_source/         # optional
+└── 18_mean_jsd_transition_tests/  # optional
 ```
-
-## Key Files for Stability Analysis
-
-### Primary Analysis Files
-
-1. **Script 01: Kruskal-Wallis Results** ⭐ MOST IMPORTANT
-   - Direct statistical test of temporal stability
-   - P-values for each motif
-   - Location: `01_motif_analysis_per_animal/{model}/`
-
-2. **Script 07: Combined Effect Sizes CSV** ⭐ MOST IMPORTANT
-   - Effect size trajectories for each motif
-   - Location: `07_motif_significange_trajectories/{model}/combined_effect_sizes_{model}.csv`
-
-3. **Script 07: Transition Significance CSV** ⭐ MOST IMPORTANT
-   - P-values for each transition
-   - Location: `07_motif_significange_trajectories/{model}/transition_significance.csv`
-
-### Secondary Analysis Files
-
-4. **Script 05: Motif Percentage Matrix** ⚠️ SECONDARY
-   - Quantitative percentages for each motif at each age
-   - Location: `05_motif_analysis/motif_percent_matrix_by_age_{model}.csv`
-
-5. **Script 05: Transition Significance Summary** ⚠️ SECONDARY
-   - Detailed transition analysis with JSD
-   - Location: `05_motif_analysis/motif_transition_significance_summary_{model}.txt`
-
-6. **Script 15: Volcano trajectories and change criteria** ⚠️ SECONDARY
-   - Per-motif volcano trajectory plots (effect size vs significance across P3/P12/P20/P60).
-   - Summary overlays: quadrant-change highlight (uses helper 07 `transition_significance.csv` when available) and centroid 3+1/2+1 rule (one point's quadrant ≠ centroid of the others; 4 points = 3+1, P12–P60 only = 2+1).
-   - `change_criteria_comparison.csv`: quadrant_change, centroid_dramatic_full, centroid_dramatic_no_P3, path_length, effect_size_range, percentiles.
-   - Location: `15_volcano_trajectories/{model}/`
-
-## Summary
-
-| Script | Purpose | Stability Analysis | Dependencies |
-|--------|---------|-------------------|--------------|
-| 01 | Per-animal analysis | ✅ PRIMARY | None |
-| 02 | Projection analysis | ❌ Not temporal | None |
-| 03 | Composition | ⚠️ Descriptive | None |
-| 04 | Proportions over time | ⚠️ Descriptive | None |
-| 05 | Motif analysis | ✅ SECONDARY | None |
-| 06 | Motif divergence | ⚠️ Visualization | 05 |
-| 07 | Trajectories | ✅ PRIMARY | 05 |
-| 08 | Clustering | ⚠️ Exploratory | 07 |
-| 09 | Projection strength | ⚠️ Visualization | None |
-| 13 | Aggregation | ❌ Aggregation only | None |
-| 14 | Model comparison | ⚠️ Model comparison | None |
-| 15 | Volcano trajectories | ⚠️ Visualization (quadrant + centroid) | 07 |
 
 ---
 
-*For interpreting helper script outputs, see [Chapter 8: Output Files and Interpretation](08_Output_Files_Interpretation.md). For stability analysis framework, see [Chapter 11: Stability Analysis](11_Stability_Analysis.md).*
+## Summary table
+
+| Script | Purpose | Typical tier |
+|--------|---------|----------------|
+| 01 | Per-animal analysis | Core |
+| 02 | Projection PCA/cluster | Core |
+| 03 | Composition | Core |
+| 04 | Proportions / CLR | Core |
+| 05 | Motif cross-age | Core |
+| 06 | Divergence plots | Core |
+| 07 | Trajectories + transitions | Core |
+| 08 | Clustering | Core |
+| 09 | Projection strength plots | Core |
+| 10 (plot) | Per-cell across ages | Optional |
+| 10–12 (compare) | External dataset compares | Maintainer |
+| 13 | Aggregate summaries | Core / batch |
+| 14 | Model comparison | Optional |
+| 15 | Volcano trajectories | Core |
+| 16 | Power / manuscript | Maintainer |
+| 17 | JSD cross-source | Optional |
+| 18 | Mean JSD transition tests | Optional |
+
+---
+
+*Maintainer utilities (00 teleporting barcodes, 16 power, figure batch, conclusions): [Chapter 14: Experimental Features](14_Experimental_Features.md). Output file names: [Chapter 8](08_Output_Files_Interpretation.md).*

@@ -336,4 +336,4 @@ This chapter provides solutions to common issues, parameter selection guidelines
 
 ---
 
-*For detailed usage instructions, see [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline.md). For output interpretation, see [Chapter 8: Output Files and Interpretation](08_Output_Files_Interpretation.md).*
+*For detailed usage instructions, see [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline.md). For output paths and columns, see [Chapter 8: Output Files and Structure](08_Output_Files_Interpretation.md).*

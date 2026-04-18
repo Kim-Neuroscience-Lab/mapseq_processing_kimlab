@@ -82,59 +82,130 @@
 <tr>
 <th>File</th>
 <th>Purpose</th>
-<th>Key Statistical Tests</th>
+<th>Tier</th>
+<th>Key methods</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>01_motif_analysis_per_animal.py</code></td>
 <td>Per-animal analysis</td>
+<td>Core</td>
 <td>Kruskal-Wallis, JSD</td>
 </tr>
 <tr>
 <td><code>02_projection_analysis.py</code></td>
 <td>Projection analysis</td>
+<td>Core</td>
 <td>PCA, clustering</td>
 </tr>
 <tr>
 <td><code>03_composition.py</code></td>
-<td>Composition analysis</td>
-<td>Descriptive statistics</td>
+<td>Composition</td>
+<td>Core</td>
+<td>Descriptive</td>
 </tr>
 <tr>
 <td><code>04_proportions_over_time_stats.py</code></td>
 <td>Proportions over time</td>
+<td>Core</td>
 <td>Chi-square, CLR</td>
 </tr>
 <tr>
 <td><code>05_motif_analysis.py</code></td>
 <td>Motif analysis</td>
-<td>Welch's t-test, KS test, JSD</td>
+<td>Core</td>
+<td>Welch, KS, JSD</td>
 </tr>
 <tr>
 <td><code>06_all_motif_divergence.py</code></td>
-<td>Motif divergence</td>
+<td>Motif divergence plots</td>
+<td>Core</td>
 <td>Visualization</td>
 </tr>
 <tr>
 <td><code>07_motif_significange_trajectories.py</code></td>
-<td>Trajectory analysis</td>
-<td>Fisher's exact test</td>
+<td>Effect-size trajectories</td>
+<td>Core</td>
+<td>Transition <strong>z-test</strong> (log counts), optional FDR</td>
 </tr>
 <tr>
 <td><code>08_motif_clustering.py</code></td>
 <td>Motif clustering</td>
-<td>Clustering algorithms</td>
+<td>Core</td>
+<td>Clustering</td>
 </tr>
 <tr>
 <td><code>09_plot_normalized_projection_strength_data.py</code></td>
 <td>Projection strength</td>
+<td>Core</td>
 <td>Visualization</td>
 </tr>
 <tr>
+<td><code>10_plot_per_cell_projection_strength_across_ages.py</code></td>
+<td>Per-cell lines across ages</td>
+<td>Optional</td>
+<td>Visualization</td>
+</tr>
+<tr>
+<td><code>10_compare_datasets_pipeline.py</code></td>
+<td>Two-way dataset compare</td>
+<td>Maintainer</td>
+<td>External data</td>
+</tr>
+<tr>
+<td><code>11_compare_vsv_mapseq_two_way.py</code></td>
+<td>VSV vs MapSeq</td>
+<td>Maintainer</td>
+<td>External data</td>
+</tr>
+<tr>
+<td><code>12_compare_datasets_pipeline_mapseq.py</code></td>
+<td>Three-way compare</td>
+<td>Maintainer</td>
+<td>External data</td>
+</tr>
+<tr>
 <td><code>13_aggregate_projection_summaries.py</code></td>
+<td>Aggregate summaries</td>
+<td>Core</td>
 <td>Aggregation</td>
-<td>Data aggregation</td>
+</tr>
+<tr>
+<td><code>14_model_group_comparison.py</code></td>
+<td>Model comparison</td>
+<td>Optional</td>
+<td>Plots / stats</td>
+</tr>
+<tr>
+<td><code>15_volcano_trajectories.py</code></td>
+<td>Trajectory methods</td>
+<td>Core</td>
+<td>Permutation, FDA, mixed-effects, etc.</td>
+</tr>
+<tr>
+<td><code>16_power_analysis.py</code></td>
+<td>Power / equivalence</td>
+<td>Maintainer</td>
+<td>See Chapter 14</td>
+</tr>
+<tr>
+<td><code>17_jsd_cross_source_summary.py</code></td>
+<td>JSD / homogeneity summary</td>
+<td>Optional</td>
+<td>Chi-square, Monte Carlo</td>
+</tr>
+<tr>
+<td><code>18_mean_jsd_transition_tests.py</code></td>
+<td>Mean JS² transition tests</td>
+<td>Optional</td>
+<td>Permutation, bootstrap</td>
+</tr>
+<tr>
+<td><code>00_teleporting_barcode_detection.py</code></td>
+<td>Batch barcode QC</td>
+<td>Maintainer</td>
+<td>Project-specific mappings</td>
 </tr>
 </tbody>
 </table>
@@ -161,7 +232,7 @@
 <h4 id="helper-scripts_1">Helper Scripts</h4>
 <ul>
 <li><strong>Kruskal-Wallis</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code></li>
-<li><strong>Fisher's Exact Test</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></li>
+<li><strong>Transition z-test (helper 07)</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></li>
 </ul>
 <h2 id="mathematical-notation-glossary">Mathematical Notation Glossary</h2>
 <table>
@@ -259,10 +330,10 @@
 <td><code>scipy.stats.kruskal</code></td>
 </tr>
 <tr>
-<td><strong>Fisher's Exact Test</strong></td>
-<td>Transition significance</td>
-<td>No change between stages</td>
-<td><code>scipy.stats.fisher_exact</code></td>
+<td><strong>Transition z-test (helper 07)</strong></td>
+<td>Effect-size change between stages</td>
+<td>No change in log-count–derived effect size</td>
+<td>Normal approx.; see Chapter 5</td>
 </tr>
 <tr>
 <td><strong>Welch's t-test</strong></td>
@@ -468,12 +539,12 @@
 <li><strong>Binomial Testing</strong>: Standard statistical testing</li>
 <li><strong>Bonferroni Correction</strong>: Multiple testing correction</li>
 <li><strong>Kruskal-Wallis Test</strong>: Non-parametric ANOVA</li>
-<li><strong>Fisher's Exact Test</strong>: Exact test for 2×2 tables</li>
+<li><strong>Transition z-tests (helper 07)</strong>: Consecutive-stage effect-size contrasts</li>
 <li><strong>Jensen-Shannon Divergence</strong>: Information-theoretic distance</li>
 </ul>
 <h2 id="change-log">Change Log</h2>
 <h3 id="version-history">Version History</h3>
-<p><strong>Current Version</strong>: As of January 2026</p>
+<p><strong>Current Version</strong>: As of April 2026</p>
 <p><strong>Key Features</strong>:<br />
 - Multiple probability models (uniform, region-specific, correlated, and additional models)<br />
 - Anchor model system for cross-cohort comparison<br />
@@ -517,36 +588,49 @@
 <li><code>-r, --min_body_to_target_ratio</code>: Injection/target ratio (default: 10)</li>
 <li><code>-u, --target_umi_min</code>: Target UMI threshold (default: 2)</li>
 <li><code>-a, --alpha</code>: Significance threshold (default: 0.05)</li>
+<li><code>-f, --apply_outlier_filtering</code>: Enable outlier filtering (mean + 2×std)</li>
+<li><code>--force_user_threshold</code>: Use the user’s <code>-u</code> value without automatic overrides</li>
 <li><code>--is-anchor-model</code>: Mark as anchor model</li>
-<li><code>--anchor-model-file</code>: Path to anchor probabilities</li>
-<li><code>--anchor-correlation-file</code>: Path to anchor correlation matrix</li>
-<li><code>--model-type</code>: Which models to run (default: all)</li>
+<li><code>--anchor-model-file</code>: Path to anchor probabilities CSV</li>
+<li><code>--anchor-correlation-file</code>: Path to anchor correlation matrix CSV</li>
+<li><code>--model-type</code>: One of <code>uniform</code>, <code>region_specific</code>, <code>correlated</code>, <code>empirical</code>, <code>smoothed_empirical</code>, <code>max_entropy</code>, <code>hierarchical_correlations</code>, <code>negative_binomial</code>, <code>zero_inflated</code>, <code>bayesian_hierarchical</code>, <code>ml_nonparametric</code>, <code>all</code> (default: <code>all</code>)</li>
+<li><code>--smoothing-alpha</code>: Smoothing α for <code>smoothed_empirical</code> (default: 1.0)</li>
+<li><code>--skip-sections</code>: Comma-separated: <code>visualizations</code>, <code>clustering</code>, <code>heatmaps</code></li>
+<li><code>--illustrator-volcano-dir</code>: Directory for illustrator-ready uniform volcano SVG</li>
+<li><code>--illustrator-report-ranges-only</code>: With illustrator dir: append ranges only, no SVG</li>
+<li><code>--illustrator-xlim</code>, <code>--illustrator-ylim</code>: Axis limits for illustrator volcano</li>
+<li><code>-A</code>, <code>-B</code>: Legacy special-area flags (deprecated for most workflows)</li>
 </ul>
+<p>Run <code>python process-nbcm-tsv.py --help</code> for the authoritative list.</p>
 <h2 id="appendix-c-output-file-structure">Appendix C: Output File Structure</h2>
 <h3 id="complete-directory-tree">Complete Directory Tree</h3>
-<div class="codehilite"><pre><span></span><code><span class="mf">02</span><span class="n">_output</span><span class="o">/</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">p3</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">analysis</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">uniform</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">region_specific</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">correlated</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">sample</span><span class="err">}</span><span class="n">_</span><span class="o">*</span><span class="mf">.</span><span class="n">csv</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">p12</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mf">...</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">p20</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mf">...</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">p60</span><span class="o">/</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="mf">...</span>
-<span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="n">_helpers</span><span class="o">/</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">01</span><span class="n">_motif_analysis_per_animal</span><span class="o">/</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">05</span><span class="n">_motif_analysis</span><span class="o">/</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">07</span><span class="n">_motif_significange_trajectories</span><span class="o">/</span>
-<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="mf">...</span>
-</code></pre></div>
+<pre class="codehilite"><code>02_output/
+├── p3/
+│   └── {parameterization}/
+│       ├── analysis/
+│       │   ├── uniform/
+│       │   ├── region_specific/
+│       │   └── correlated/
+│       └── {sample}_*.csv
+├── p12/
+│   └── {parameterization}/
+│       └── ...
+├── p20/
+│   └── {parameterization}/
+│       └── ...
+├── p60/
+│   └── {parameterization}/
+│       └── ...
+└── {parameterization}_helpers/
+    ├── 01_motif_analysis_per_animal/
+    ├── 05_motif_analysis/
+    ├── 07_input/                      # copied upsetplot CSVs for 07/15
+    ├── 07_motif_significange_trajectories/
+    ├── 15_volcano_trajectories/
+    ├── 17_jsd_cross_source/           # optional
+    ├── 18_mean_jsd_transition_tests/  # optional
+    └── ...
+</code></pre>
 
 <h2 id="appendix-d-quick-reference">Appendix D: Quick Reference</h2>
 <h3 id="key-formulas">Key Formulas</h3>
@@ -558,13 +642,12 @@ $$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
 $$P(motif) = \prod_{i \in M} p_i \cdot \prod_{j \notin M} (1 - p_j)$$</p>
 <p><strong>Correlated Probability</strong>:<br />
 $$P(A, B, C) = P(A) \cdot P(B|A) \cdot P(C|B)$$</p>
-<h3 id="key-interpretations">Key Interpretations</h3>
+<h3 id="key-readings-definitions">Key readings (definitions)</h3>
 <ul>
-<li><strong>Effect Size &gt; 0</strong>: Over-represented</li>
-<li><strong>Effect Size &lt; 0</strong>: Under-represented</li>
-<li><strong>JSD &lt; 0.05</strong>: Very similar (stable)</li>
-<li><strong>JSD &gt; 0.2</strong>: Large difference (unstable)</li>
-<li><strong>Kruskal-Wallis p &lt; 0.05</strong>: Significant change over time</li>
+<li><strong>Effect Size &gt; 0</strong>: Observed exceeds expected under the model</li>
+<li><strong>Effect Size &lt; 0</strong>: Observed below expected</li>
+<li><strong>JSD</strong>: Similarity metric; thresholds are context- and implementation-dependent (see helper docs)</li>
+<li><strong>Kruskal-Wallis p &lt; α</strong>: Reject equal distributions across groups (at chosen α)</li>
 </ul>
 <hr />
 <p><em>For detailed information, refer to specific chapters. For mathematical details, see <a href="10_Mathematical_Functions.html">Chapter 10: Mathematical Functions Reference</a>.</em></p>

@@ -63,11 +63,11 @@
 - <strong><code>neg</code></strong>: Negative control UMI counts (recommended)<br />
 - <strong>Target regions</strong>: One or more columns with region names (e.g., <code>RSP</code>, <code>PM</code>, <code>AM</code>, <code>AL</code>, <code>LM</code>)</p>
 <p><strong>Example NBCM File:</strong></p>
-<div class="codehilite"><pre><span></span><code>barcodes    RSP    PM    AM    AL    LM    neg    inj
+<pre class="codehilite"><code>barcodes    RSP    PM    AM    AL    LM    neg    inj
 barcode_1   0      5     12    8     3     0     150
 barcode_2   2      0     0     15    0     0     200
 barcode_3   0      0     0     0     0     1     50
-</code></pre></div>
+</code></pre>
 
 <p><strong>Sample data and labels</strong>: The repository includes example NBCM files and label files in <code>sample_data/</code> (e.g. <code>JR0375.nbcm.tsv</code>, <code>labels_for_jr0375</code>, <code>p60_aggregated_cleaned_matrix.tsv</code>, <code>labels_for_p60_aggregated_cleaned_matrix.txt</code>) for format guidance. Use these when in doubt about column order and the labels argument for main processing. See <a href="04_Main_Processing_Pipeline.html">Chapter 4: Main Processing Pipeline</a> for the <code>-l</code> argument.</p>
 <h3 id="data-quality-requirements">Data Quality Requirements</h3>
@@ -82,26 +82,26 @@ barcode_3   0      0     0     0     0     1     50
 <p>The preprocessing script standardizes column names across replicate files. This is necessary because different samples may use different column naming conventions.</p>
 <p><strong>Interactive Mode:</strong><br />
 The script prompts you to map each original column name to a standardized name:</p>
-<div class="codehilite"><pre><span></span><code>📂<span class="w"> </span><span class="nv">Processing</span><span class="w"> </span><span class="nv">file</span>:<span class="w"> </span><span class="nv">sample1</span>.<span class="nv">nbcm</span>.<span class="nv">tsv</span>
-<span class="nv">Detected</span><span class="w"> </span><span class="nv">columns</span>:
-<span class="w">   </span><span class="nv">RSP</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nv">PM</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nv">AM</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nv">neg</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nv">inj</span>
-🔤<span class="w"> </span><span class="nv">Enter</span><span class="w"> </span><span class="nv">standardized</span><span class="w"> </span><span class="nv">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">column</span><span class="w"> </span><span class="s1">&#39;RSP&#39;</span>:<span class="w"> </span><span class="nv">RSP</span>
-🔤<span class="w"> </span><span class="nv">Enter</span><span class="w"> </span><span class="nv">standardized</span><span class="w"> </span><span class="nv">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">column</span><span class="w"> </span><span class="s1">&#39;PM&#39;</span>:<span class="w"> </span><span class="nv">PM</span>
+<pre class="codehilite"><code>📂 Processing file: sample1.nbcm.tsv
+Detected columns:
+   RSP | PM | AM | neg | inj
+🔤 Enter standardized name for column 'RSP': RSP
+🔤 Enter standardized name for column 'PM': PM
 ...
-</code></pre></div>
+</code></pre>
 
 <p><strong>Mapping File Mode:</strong><br />
 You can provide a YAML or JSON file with column mappings to skip interactive prompts:</p>
-<div class="codehilite"><pre><span></span><code><span class="nt">column_mappings</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">sample1.nbcm.tsv</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">RSP</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">RSP</span>
-<span class="w">    </span><span class="nt">PM</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PM</span>
-<span class="w">    </span><span class="nt">AM</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AM</span>
-<span class="w">    </span><span class="nt">neg</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">neg</span>
-<span class="w">    </span><span class="nt">inj</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">inj</span>
-<span class="nt">negative_columns</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">sample1.nbcm.tsv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">neg</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-yaml">column_mappings:
+  sample1.nbcm.tsv:
+    RSP: RSP
+    PM: PM
+    AM: AM
+    neg: neg
+    inj: inj
+negative_columns:
+  sample1.nbcm.tsv: neg
+</code></pre>
 
 <h3 id="step-2-threshold-calculation">Step 2: Threshold Calculation</h3>
 <p>The preprocessing script calculates a threshold for noise filtering based on negative control values:</p>
@@ -112,18 +112,18 @@ You can provide a YAML or JSON file with column mappings to skip interactive pro
 <p><strong>Fallback</strong>: If no negative control column is available or has no data, uses a fallback threshold (default: 2.0).</p>
 <h3 id="step-3-noise-filtering">Step 3: Noise Filtering</h3>
 <p>Values below the threshold are set to zero:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Pseudo-code</span>
-<span class="k">for</span> <span class="n">each</span> <span class="n">column</span> <span class="p">(</span><span class="k">except</span> <span class="n">barcodes</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">:</span>
-        <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python"># Pseudo-code
+for each column (except barcodes):
+    if value &lt; threshold:
+        value = 0
+</code></pre>
 
 <p>This removes noise from single UMI counts in target regions.</p>
 <h3 id="step-4-negative-control-filtering">Step 4: Negative Control Filtering</h3>
 <p>Rows where the negative control column has non-zero values are removed:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">neg_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="n">neg_col</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">if neg_col in df.columns:
+    df = df[df[neg_col] == 0]
+</code></pre>
 
 <p>This ensures only high-quality barcodes are retained.</p>
 <h3 id="step-5-column-alignment">Step 5: Column Alignment</h3>
@@ -132,18 +132,18 @@ You can provide a YAML or JSON file with column mappings to skip interactive pro
 - Column order is preserved from first file processed</p>
 <h3 id="step-6-aggregation">Step 6: Aggregation</h3>
 <p>All aligned cleaned dataframes are concatenated into a single aggregated matrix:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">final_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">aligned_dfs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">final_df = pd.concat(aligned_dfs, axis=0)
+</code></pre>
 
 <p><strong>Output</strong>: <code>aggregated_cleaned_matrix.tsv</code></p>
 <h2 id="preprocessing-script-usage">Preprocessing Script Usage</h2>
 <h3 id="command-line-interface">Command-Line Interface</h3>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>preprocess_and_aggregate.py<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-i<span class="w"> </span>/path/to/input/directory<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-o<span class="w"> </span>/path/to/output/directory<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-t<span class="w"> </span><span class="m">2</span>.0<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--mapping-file<span class="w"> </span>mappings.yaml
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">python preprocess_and_aggregate.py \
+    -i /path/to/input/directory \
+    -o /path/to/output/directory \
+    -t 2.0 \
+    --mapping-file mappings.yaml
+</code></pre>
 
 <p><strong>Arguments:</strong><br />
 - <strong><code>-i, --input_dir</code></strong> (required): Directory containing replicate <code>.tsv</code> files<br />

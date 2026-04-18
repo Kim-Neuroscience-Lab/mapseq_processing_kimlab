@@ -49,261 +49,127 @@
 <body>
 <h1 id="chapter-11-stability-analysis">Chapter 11: Stability Analysis</h1>
 <h2 id="overview">Overview</h2>
-<p>This chapter describes the stability analysis framework for assessing whether projection motif frequencies change significantly across developmental timepoints. The analysis uses both model-independent and model-dependent metrics.</p>
+<p>This chapter outlines a <strong>generic</strong> framework for asking whether projection motif frequencies (or model deviations) change across developmental stages. It does not prescribe verdicts for a particular dataset: combine metrics below with your pre-registered criteria and <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>.</p>
 <h2 id="stability-analysis-framework">Stability Analysis Framework</h2>
 <h3 id="central-question">Central Question</h3>
-<p><strong>Do projection motif frequencies change significantly over developmental time?</strong></p>
-<p>This question is addressed using multiple complementary approaches:<br />
-1. <strong>Model-independent analysis</strong>: Direct comparison of observed frequencies<br />
-2. <strong>Model-dependent analysis</strong>: Comparison against statistical model predictions<br />
-3. <strong>Transition analysis</strong>: Specific stage-to-stage comparisons</p>
-<h3 id="key-metrics">Key Metrics</h3>
+<p><strong>Do projection motif frequencies or model-relative deviations change across the stages you include?</strong></p>
+<p>Typical complementary angles:</p>
+<ol>
+<li><strong>Model-independent</strong>: Compare observed frequencies or distributions across ages (e.g., per-animal summaries, JSD between age pairs).</li>
+<li><strong>Model-dependent</strong>: Track effect sizes (observed vs. expected under a chosen model) across ages.</li>
+<li><strong>Transition-focused</strong>: Test or describe changes between consecutive stages.</li>
+</ol>
+<h3 id="key-metrics-what-they-stress">Key Metrics (what they stress)</h3>
 <table>
 <thead>
 <tr>
 <th>Metric</th>
 <th>Type</th>
-<th>What It Measures</th>
-<th>Interpretation</th>
+<th>What it stresses</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Kruskal-Wallis</strong></td>
+<td><strong>Kruskal-Wallis</strong> (helper 01)</td>
 <td>Model-independent</td>
-<td>Distribution of relative proportions across animals</td>
-<td>Individual-level stability</td>
+<td>Whether per-animal motif frequency distributions differ across ages</td>
 </tr>
 <tr>
-<td><strong>Effect Size Range</strong></td>
+<td><strong>Jensen-Shannon</strong> (helpers 01 / 05)</td>
+<td>Model-independent</td>
+<td>Similarity of frequency distributions between age pairs (scale depends on implementation—see helper docs)</td>
+</tr>
+<tr>
+<td><strong>Effect size trajectories</strong> (helper 07)</td>
 <td>Model-dependent</td>
-<td>Change in aggregate deviation from model</td>
-<td>Model-fit stability</td>
+<td>How log₂(Observed+1 / Expected+1) moves across stages</td>
 </tr>
 <tr>
-<td><strong>Transition Significance</strong></td>
-<td>Model-independent</td>
-<td>Proportion changes between consecutive stages</td>
-<td>Proportional stability</td>
+<td><strong>Transition tests</strong> (helper 07)</td>
+<td>Model-dependent</td>
+<td>Whether effect size changes between consecutive stages (primary implementation: z-test on differences; see Chapter 5)</td>
 </tr>
 <tr>
-<td><strong>Jensen-Shannon Divergence</strong></td>
-<td>Model-independent</td>
-<td>Distribution similarity between ages</td>
-<td>Magnitude of changes</td>
+<td><strong>Trajectory methods</strong> (helper 15)</td>
+<td>Various</td>
+<td>Path-level variation, mixed models, quadrant summaries, etc.</td>
 </tr>
 </tbody>
 </table>
 <h2 id="model-independent-analysis">Model-Independent Analysis</h2>
-<h3 id="kruskal-wallis-test">Kruskal-Wallis Test</h3>
-<p><strong>Purpose</strong>: Tests whether relative proportions across individual animals change over time.</p>
-<p><strong>Null Hypothesis</strong>: The distribution of normalized frequencies across animals is the same at all ages.</p>
-<p><strong>Interpretation</strong>:<br />
-- <strong>p &lt; 0.05</strong>: Relative proportions across animals differ significantly across ages (UNSTABLE)<br />
-- <strong>p ≥ 0.05</strong>: Relative proportions across animals remain stable across ages (STABLE)</p>
-<p><strong>Key Insight</strong>: Tests whether animals maintain the same relative ranking of motif frequencies across development.</p>
-<p><strong>Code Reference</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code> (line 95)</p>
-<p><strong>Example Results</strong>:<br />
-- 0/31 motifs (0.0%) show significant changes → <strong>STABLE</strong><br />
-- Mean p-value: 0.59, Median: 0.66</p>
-<h3 id="jensen-shannon-divergence">Jensen-Shannon Divergence</h3>
-<p><strong>Purpose</strong>: Measures distribution similarity between ages.</p>
-<p><strong>Range</strong>: 0 (identical) to 1 (maximally different)</p>
-<p><strong>Interpretation</strong>:<br />
-- <strong>JSD &lt; 0.05</strong>: Very similar distributions (stable)<br />
-- <strong>JSD 0.05-0.2</strong>: Moderate difference<br />
-- <strong>JSD &gt; 0.2</strong>: Large difference (unstable)</p>
-<p><strong>Example Results</strong>:<br />
-- P14→P16 vs P22→P24: JSD = 0.0013<br />
-- P22→P24 vs P60+→P62+: JSD = 0.0035<br />
-- P14→P16 vs P60+→P62+: JSD = 0.0019</p>
-<p>All values &lt; 0.05 → <strong>STABLE</strong></p>
+<h3 id="kruskal-wallis-helper-01">Kruskal-Wallis (helper 01)</h3>
+<p><strong>Purpose</strong>: Non-parametric comparison of motif-related frequency structure across age groups (per-animal replicates when available).</p>
+<p><strong>Null hypothesis</strong>: Same distribution across ages.</p>
+<p><strong>Reading</strong>: Small p-values flag motifs/groups where the test rejects the null; thresholding (e.g. α or FDR) is your choice. See <a href="07_Helper_Scripts.html">Chapter 7</a> for outputs.</p>
+<p><strong>Code reference</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code></p>
+<h3 id="jensen-shannon-divergence">Jensen-Shannon divergence</h3>
+<p><strong>Purpose</strong>: Quantify similarity between empirical distributions (e.g. across ages).</p>
+<p><strong>Range</strong>: 0 (identical) to 1 (maximally different) for the standard JSD definition; helper 05 also reports squared JS on 2-bin vectors for motifs—do not mix scales across helpers without reading the helper docstrings.</p>
 <h2 id="model-dependent-analysis">Model-Dependent Analysis</h2>
-<h3 id="effect-size-trajectories">Effect Size Trajectories</h3>
-<p><strong>Purpose</strong>: Tests whether aggregate counts deviate from model predictions and how these deviations change.</p>
-<p><strong>Calculation</strong>: Effect size calculated at each developmental timepoint:</p>
+<h3 id="effect-size-trajectories-helper-07">Effect size trajectories (helper 07)</h3>
+<p><strong>Definition</strong> (per motif, per stage):</p>
 <p>$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
-<p><strong>Range</strong>: max(effect_size) - min(effect_size) across ages</p>
-<p><strong>Interpretation</strong>:<br />
-- <strong>Range &gt; 1.0</strong>: Large changes in deviation from model (UNSTABLE)<br />
-- <strong>Range &lt; 1.0</strong>: Relatively stable deviation from model (STABLE)</p>
-<p><strong>Key Insight</strong>: Tests whether aggregate counts shift relative to model predictions across development.</p>
-<p><strong>Example Results</strong>:<br />
-- Uniform model: 71-90% of motifs show range &gt; 1.0 → <strong>UNSTABLE</strong><br />
-- Region-specific model: 74-87% of motifs show range &gt; 1.0 → <strong>UNSTABLE</strong></p>
-<h3 id="transition-significance">Transition Significance</h3>
-<p><strong>Purpose</strong>: Tests whether proportions change between consecutive stages.</p>
-<p><strong>Method</strong>: Fisher's exact test on 2×2 contingency tables</p>
-<p><strong>Null Hypothesis</strong>: The proportion of the motif (relative to all motifs) is the same in both stages.</p>
-<p><strong>Interpretation</strong>:<br />
-- <strong>p &lt; 0.05</strong>: Proportion changed significantly between stages (UNSTABLE)<br />
-- <strong>p ≥ 0.05</strong>: Proportion remained stable between stages (STABLE)</p>
-<p><strong>Code Reference</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code> (line 84)</p>
-<p><strong>Example Results</strong>:<br />
-- 13/52 transitions (25.0%) are significant → <strong>MODERATE CHANGES</strong></p>
-<h2 id="logical-consistency">Logical Consistency</h2>
-<h3 id="the-apparent-paradox">The Apparent Paradox</h3>
-<p><strong>Finding 1</strong>: Kruskal-Wallis shows 0% significant → <strong>STABLE</strong></p>
-<p><strong>Finding 2</strong>: Effect size trajectories show 71-87% with large changes → <strong>UNSTABLE</strong></p>
-<p><strong>Finding 3</strong>: Transition significance shows 25% significant → <strong>MODERATE</strong></p>
-<h3 id="why-this-is-logically-consistent">Why This Is Logically Consistent</h3>
-<p>These tests measure <strong>different aspects</strong> of stability:</p>
-<ol>
-<li><strong>Kruskal-Wallis</strong>: Individual-level relative proportions</li>
-<li>Tests whether animals maintain same relative ranking</li>
-<li>
-<p>Can be stable even if aggregate counts shift</p>
-</li>
-<li>
-<p><strong>Effect Size</strong>: Population-level model deviations</p>
-</li>
-<li>Tests whether aggregate counts shift relative to model</li>
-<li>
-<p>Can change even if relative proportions stay same</p>
-</li>
-<li>
-<p><strong>Transition Significance</strong>: Proportional changes</p>
-</li>
-<li>Tests whether proportions change between stages</li>
-<li>Intermediate between complete stability and high instability</li>
-</ol>
-<h3 id="example-scenario">Example Scenario</h3>
-<p><strong>Scenario</strong>: Consistent Relative Proportions, Shifting Model Fit</p>
+<p><strong>Descriptive range</strong>: e.g. max(effect size) − min(effect size) across stages summarizes how much the deviation from the model moves; cutoffs are not universal.</p>
+<p><strong>Code reference</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></p>
+<h3 id="transition-significance-helper-07">Transition significance (helper 07)</h3>
+<p><strong>Purpose</strong>: Stage-to-stage changes in effect size.</p>
+<p><strong>Implementation note</strong>: The pipeline’s primary transition inference uses a <strong>two-sample z-test</strong> on differences of log-transformed counts (delta method SE), with optional FDR for the significance flag—<strong>not</strong> Fisher’s exact test. Details: <a href="05_Statistical_Methods.html">Chapter 5</a>.</p>
+<h2 id="why-metrics-can-disagree-no-paradox">Why metrics can disagree (no paradox)</h2>
+<p>Different summaries answer different questions:</p>
 <ul>
-<li><strong>P12</strong>: Animal A has 10% of motif X, Animal B has 5% → Aggregate = 7.5%</li>
-<li><strong>P60</strong>: Animal A has 10% of motif X, Animal B has 5% → Aggregate = 7.5%</li>
-<li><strong>Kruskal-Wallis</strong>: Non-significant (relative proportions unchanged)</li>
-<li><strong>But if model's expected value changes</strong>:</li>
-<li>P12 effect size = log₂(7.5/5) = 0.585</li>
-<li>P60 effect size = log₂(7.5/10) = -0.415</li>
-<li>Range = 1.0 (large change!)</li>
+<li><strong>Per-animal distribution tests</strong> can be insensitive to shared multiplicative shifts that leave ranks similar.</li>
+<li><strong>Population-level effect sizes</strong> move when expected counts under the model change, even if raw proportions look similar.</li>
+<li><strong>Transition p-values</strong> highlight local stage pairs; they need not align with global distribution tests.</li>
 </ul>
-<p><strong>Conclusion</strong>: Relative proportions across animals can be stable while aggregate counts shift relative to model predictions.</p>
-<h2 id="interpretation-guidelines">Interpretation Guidelines</h2>
-<h3 id="overall-stability-assessment">Overall Stability Assessment</h3>
+<p>Use this section to avoid forcing a single “stability score” when metrics intentionally stress different structure.</p>
+<h2 id="using-multiple-outputs-generic-workflow">Using multiple outputs (generic workflow)</h2>
 <ol>
-<li><strong>Start with Kruskal-Wallis results</strong>:</li>
-<li>Count motifs with p &lt; 0.05: High count = unstable system</li>
-<li>
-<p>Count motifs with p ≥ 0.05: High count = stable system</p>
-</li>
-<li>
-<p><strong>Examine transition significance</strong>:</p>
-</li>
-<li>Which transitions have the most significant changes?</li>
-<li>
-<p>Are changes concentrated in specific transitions?</p>
-</li>
-<li>
-<p><strong>Check effect size magnitudes</strong>:</p>
-</li>
-<li>Large effect sizes (&gt;1 or &lt;-1) indicate substantial changes</li>
-<li>
-<p>Small effect sizes (&lt;0.5) indicate minor changes</p>
-</li>
-<li>
-<p><strong>Compare models</strong>:</p>
-</li>
-<li>Do both models agree on stability?</li>
-<li>Agreement suggests robust findings</li>
+<li><strong>Model-independent</strong>: Inspect helper 01 (and JSD tables) for cohort-level distribution shifts.</li>
+<li><strong>Model-dependent</strong>: Inspect helper 07 <code>combined_effect_sizes_*.csv</code> and <code>transition_significance.csv</code>.</li>
+<li><strong>Trajectory / path analyses</strong>: If you run helper 15, start from method-specific CSVs under <code>15_volcano_trajectories/{model}/</code> and pre-specify which method is primary for your study.</li>
 </ol>
-<h3 id="motif-specific-stability">Motif-Specific Stability</h3>
-<p><strong>Stable Motifs</strong> (p ≥ 0.05 in Kruskal-Wallis):<br />
-- Consistent representation across ages<br />
-- Small effect size changes<br />
-- No significant transitions</p>
-<p><strong>Unstable Motifs</strong> (p &lt; 0.05 in Kruskal-Wallis):<br />
-- Changing representation across ages<br />
-- Large effect size changes<br />
-- Significant transitions</p>
-<p><strong>Early-Changing Motifs</strong> (significant P3→P12 transition):<br />
-- Changes occur early in development<br />
-- May stabilize later</p>
-<p><strong>Late-Changing Motifs</strong> (significant P20→P60 transition):<br />
-- Changes occur late in development<br />
-- May be maturation effects</p>
-<h3 id="magnitude-of-changes">Magnitude of Changes</h3>
-<p><strong>JSD Interpretation</strong>:<br />
-- &lt; 0.05: Very stable (minimal change)<br />
-- 0.05-0.1: Moderately stable (small changes)<br />
-- 0.1-0.2: Moderately unstable (noticeable changes)<br />
-- &gt; 0.2: Unstable (large changes)</p>
-<p><strong>Effect Size Interpretation</strong>:<br />
-- |Effect Size| &lt; 0.5: Small change<br />
-- |Effect Size| 0.5-1.0: Moderate change<br />
-- |Effect Size| &gt; 1.0: Large change</p>
-<h2 id="recommended-analysis-workflow">Recommended Analysis Workflow</h2>
-<h3 id="step-1-model-independent-analysis">Step 1: Model-Independent Analysis</h3>
-<ol>
-<li>Run Script 01: Get Kruskal-Wallis results</li>
-<li>Calculate JSD between age pairs</li>
-<li>Assess overall stability</li>
-</ol>
-<h3 id="step-2-model-dependent-analysis">Step 2: Model-Dependent Analysis</h3>
-<ol>
-<li>Run Script 07: Get effect size trajectories</li>
-<li>Calculate effect size ranges</li>
-<li>Assess model-fit stability</li>
-</ol>
-<h3 id="step-3-transition-analysis">Step 3: Transition Analysis</h3>
-<ol>
-<li>Run Script 07: Get transition significance</li>
-<li>Identify which transitions show changes</li>
-<li>Assess when changes occur</li>
-</ol>
-<h3 id="step-4-integration">Step 4: Integration</h3>
-<ol>
-<li>Compare model-independent and model-dependent findings</li>
-<li>Identify motifs with consistent patterns</li>
-<li>Interpret biological significance</li>
-</ol>
-<h2 id="key-files-for-stability-analysis">Key Files for Stability Analysis</h2>
-<h3 id="primary-data-sources">Primary Data Sources</h3>
-<ol>
-<li><strong>Script 01: Kruskal-Wallis Results</strong> ⭐ MOST IMPORTANT</li>
-<li>Location: <code>01_motif_analysis_per_animal/{model}/</code></li>
-<li>
-<p>Direct statistical test of temporal stability</p>
-</li>
-<li>
-<p><strong>Script 07: Combined Effect Sizes CSV</strong> ⭐ MOST IMPORTANT</p>
-</li>
-<li>Location: <code>07_motif_significange_trajectories/{model}/combined_effect_sizes_{model}.csv</code></li>
-<li>
-<p>Effect size trajectories for each motif</p>
-</li>
-<li>
-<p><strong>Script 07: Transition Significance CSV</strong> ⭐ MOST IMPORTANT</p>
-</li>
-<li>Location: <code>07_motif_significange_trajectories/{model}/transition_significance.csv</code></li>
-<li>P-values for each transition</li>
-</ol>
-<h3 id="secondary-data-sources">Secondary Data Sources</h3>
-<ol>
-<li><strong>Script 05: Motif Percentage Matrix</strong> ⚠️ SECONDARY</li>
-<li>Location: <code>05_motif_analysis/motif_percent_matrix_by_age_{model}.csv</code></li>
-<li>
-<p>Quantitative percentages for each motif at each age</p>
-</li>
-<li>
-<p><strong>Age-Specific Upsetplot CSVs</strong> ⚠️ SECONDARY</p>
-</li>
-<li>Location: <code>{age}/{parameterization}/analysis/{model}/*_upsetplot_{model}.csv</code></li>
-<li>Core motif data for each age</li>
-</ol>
-<h2 id="summary">Summary</h2>
-<h3 id="answering-do-results-change-significantly-over-time">Answering "Do Results Change Significantly Over Time?"</h3>
-<p><strong>Primary Evidence</strong>:<br />
-1. <strong>Kruskal-Wallis Test</strong>: Model-independent test of frequency distributions<br />
-2. <strong>Transition Significance</strong>: Tests specific stage transitions<br />
-3. <strong>Effect Size Trajectories</strong>: Quantifies magnitude of changes</p>
-<p><strong>Interpretation</strong>:<br />
-- <strong>Many significant results</strong> = unstable system<br />
-- <strong>Few significant results</strong> = stable system<br />
-- <strong>Mixed results</strong> = selective changes in specific motifs</p>
-<p><strong>Key Insight</strong>: Model-independent and model-dependent metrics can give different results without contradiction—they measure different aspects of stability.</p>
+<h2 id="trajectory-significance-helper-15">Trajectory significance (helper 15)</h2>
+<p>Helper 15 bundles several approaches (permutation, FDA, mixed effects, distance metrics, legacy quadrant rules). For <strong>file locations and column names</strong>, see <a href="08_Output_Files_Interpretation.html">Chapter 8</a> and <a href="15_Trajectory_Results_Interpretation.html">Chapter 15</a>.</p>
+<p><strong>Publication hygiene (generic)</strong>:</p>
+<ul>
+<li>Prefer methods with clear nulls (e.g. permutation, FDA) when claiming trajectory significance.</li>
+<li>Report multiple-testing handling as implemented in each CSV.</li>
+<li>Treat legacy quadrant/centroid rules as exploratory unless you justify them.</li>
+</ul>
+<p><strong>Method agreement</strong>: <code>method_comparison/method_agreement_matrix.csv</code> summarizes how often binary calls agree across methods—useful for robustness, not as a substitute for a pre-specified primary test.</p>
+<h2 id="key-file-locations-reference">Key file locations (reference)</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Typical path pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Helper 01 outputs</td>
+<td><code>02_output/{parameterization}_helpers/01_motif_analysis_per_animal/{model}/</code></td>
+</tr>
+<tr>
+<td>Helper 05 outputs</td>
+<td><code>02_output/{parameterization}_helpers/05_motif_analysis/</code></td>
+</tr>
+<tr>
+<td>Helper 07 outputs</td>
+<td><code>02_output/{parameterization}_helpers/07_motif_significange_trajectories/{model}/</code></td>
+</tr>
+<tr>
+<td>Helper 15 outputs</td>
+<td><code>02_output/{parameterization}_helpers/15_volcano_trajectories/{model}/</code></td>
+</tr>
+<tr>
+<td>Per-age upsetplot CSVs</td>
+<td><code>02_output/{age}/{parameterization}/analysis/{model}/*_upsetplot_{model}.csv</code></td>
+</tr>
+</tbody>
+</table>
 <hr />
-<p><em>For detailed statistical methods, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>. For helper script details, see <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a>.</em></p>
+<p><em>For formulas and test definitions, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>. For run order and CLI, see <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a>.</em></p>
 <script>
     mermaid.initialize({ startOnLoad: true, theme: 'default' });
     document.querySelectorAll('pre code').forEach(block => {

@@ -42,9 +42,9 @@ The **primary way to run** the pipeline is:
 
 1. **Preprocessing and aggregation**: Use `preprocess_and_aggregate.py` to prepare NBCM files and produce an aggregated matrix.
 2. **Run the pipeline**: Edit `all_commands.txt` (or use `all_commands_all-parameters.txt`) to match your paths and samples, then from the repository root make the script executable if needed (`chmod +x run_commands.sh`) and run **`./run_commands.sh`**. The script executes each line of the command file in order (main processing and helper scripts) and logs output.
-3. **Interpret outputs**: Use the output structure and helper script results as described in the documentation.
+3. **Inspect outputs**: Use the output structure and helper script results as described in the documentation (starting with [Chapter 8](08_Output_Files_Interpretation.md)).
 
-**Execution methods**: (1) **Batch (recommended)**: Edit `all_commands.txt` (or `all_commands_all-parameters.txt`), make the script executable if needed (`chmod +x run_commands.sh`), and run `./run_commands.sh` from the repository root. (2) **Manual**: Run preprocessing, then `process-nbcm-tsv.py`, then helper scripts individually in order. (3) **GUI**: Experimental GUI options (untested) are documented in [Chapter 14: Experimental Features](14_Experimental_Features.md). After the pipeline, you can run quality control (`postprocessing_checks.py`), figure generation (`figure_generation/generate_figure_from_outputs.py`), and conclusions scripts (see [Chapter 8: Output Files and Interpretation](08_Output_Files_Interpretation.md)).
+**Execution methods**: (1) **Batch (recommended)**: Edit `all_commands.txt` (or `all_commands_all-parameters.txt`), make the script executable if needed (`chmod +x run_commands.sh`), and run `./run_commands.sh` from the repository root. (2) **Manual**: Run preprocessing, then `process-nbcm-tsv.py`, then helper scripts individually in order. (3) **GUI**: Experimental GUI options (untested) are documented in [Chapter 14: Experimental Features](14_Experimental_Features.md). Optional QC: `postprocessing_checks.py` (see [Chapter 8: Output Files and Structure](08_Output_Files_Interpretation.md)). Optional lab batch scripts (figure aggregation, conclusions generation) are **not** part of the standard end-user path; see [Chapter 14: Experimental Features](14_Experimental_Features.md).
 
 ## Before you run
 
@@ -180,7 +180,7 @@ Results are organized in a hierarchical directory structure:
 
 ## Documentation Organization
 
-This documentation is organized into 14 chapters:
+This documentation is organized into 16 chapters:
 
 1. **Introduction** (this chapter) - Overview and key concepts
 2. **Installation and Setup** - System requirements and installation
@@ -189,20 +189,22 @@ This documentation is organized into 14 chapters:
 5. **Statistical Methods** - N₀ estimation, binomial testing
 6. **Probability Models** - All probability models explained
 7. **Helper Scripts** - Cross-age analysis scripts
-8. **Output Files and Interpretation** - Understanding results
+8. **Output Files and Structure** - Paths, filenames, and column reference
 9. **Code Review** - Architecture and implementation details
 10. **Mathematical Functions Reference** - All formulas with code references
-11. **Stability Analysis** - Temporal stability framework
+11. **Stability Analysis** - Generic stability metrics framework
 12. **Troubleshooting and Best Practices** - Common issues and solutions
 13. **References and Appendices** - Code references, notation glossary
-14. **Experimental Features** - Untested GUI wizards (use bash + command file for production)
+14. **Experimental Features** - GUI wizards and maintainer batch tools
+15. **Trajectory Results** - Helper 15 file/method reference (no bundled results)
+16. **Cross-Anchor Analysis** - Conceptual checklist for anchor comparisons
 
 ## Next Steps
 
 - **New users**: Proceed to [Chapter 2: Installation and Setup](02_Installation_Setup.md)
 - **Data preparation**: See [Chapter 3: Data Preparation](03_Data_Preparation.md)
 - **Understanding methods**: See [Chapter 5: Statistical Methods](05_Statistical_Methods.md) and [Chapter 6: Probability Models](06_Probability_Models.md)
-- **Interpreting results**: See [Chapter 8: Output Files and Interpretation](08_Output_Files_Interpretation.md)
+- **Output layout**: See [Chapter 8: Output Files and Structure](08_Output_Files_Interpretation.md)
 
 ---
 

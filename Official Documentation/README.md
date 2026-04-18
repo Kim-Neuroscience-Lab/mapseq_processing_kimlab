@@ -15,13 +15,15 @@ This documentation provides comprehensive coverage of the MAPseq (Multiplexed An
 5. **[Statistical Methods](chapters/05_Statistical_Methods.md)** - N₀ estimation, binomial testing, and effect sizes
 6. **[Probability Models](chapters/06_Probability_Models.md)** - All probability models explained in detail
 7. **[Helper Scripts](chapters/07_Helper_Scripts.md)** - Cross-age analysis scripts and their usage
-8. **[Output Files and Interpretation](chapters/08_Output_Files_Interpretation.md)** - Understanding results and output structure
+8. **[Output Files and Structure](chapters/08_Output_Files_Interpretation.md)** - Output paths, filenames, and column reference
 9. **[Code Review](chapters/09_Code_Review.md)** - Architecture, functions, and implementation details
 10. **[Mathematical Functions Reference](chapters/10_Mathematical_Functions.md)** - All formulas with code references
 11. **[Stability Analysis](chapters/11_Stability_Analysis.md)** - Temporal stability framework and interpretation
 12. **[Troubleshooting and Best Practices](chapters/12_Troubleshooting_Best_Practices.md)** - Common issues and solutions
 13. **[References and Appendices](chapters/13_References_Appendices.md)** - Code references, notation glossary, and quick reference
-14. **[Experimental Features](chapters/14_Experimental_Features.md)** - Untested GUI wizards (use bash + command file for production)
+14. **[Experimental Features](chapters/14_Experimental_Features.md)** - Untested GUI wizards, maintainer batch scripts (use bash + command file for production)
+15. **[Trajectory Results](chapters/15_Trajectory_Results_Interpretation.md)** - Helper 15 output files and methods (reference; no dataset-specific results)
+16. **[Cross-Anchor Analysis](chapters/16_Cross_Anchor_Comparative_Analysis.md)** - Conceptual checklist for comparing anchor configurations
 
 ## Quick Start
 
@@ -38,11 +40,12 @@ This documentation provides comprehensive coverage of the MAPseq (Multiplexed An
 2. Review [Chapter 6: Probability Models](chapters/06_Probability_Models.md) for model details
 3. Consult [Chapter 10: Mathematical Functions Reference](chapters/10_Mathematical_Functions.md) for formulas
 
-### For Interpreting Results
+### For outputs and file layout
 
-1. See [Chapter 8: Output Files and Interpretation](chapters/08_Output_Files_Interpretation.md) for output structure
-2. Review [Chapter 11: Stability Analysis](chapters/11_Stability_Analysis.md) for stability framework
-3. Check [Chapter 7: Helper Scripts](chapters/07_Helper_Scripts.md) for helper script outputs
+1. See [Chapter 8: Output Files and Structure](chapters/08_Output_Files_Interpretation.md) for paths and columns
+2. Check [Chapter 7: Helper Scripts](chapters/07_Helper_Scripts.md) for helper outputs and run order
+3. Review [Chapter 11: Stability Analysis](chapters/11_Stability_Analysis.md) for a generic metrics framework (no study-specific verdicts)
+4. Advanced: [Chapter 15](chapters/15_Trajectory_Results_Interpretation.md), [Chapter 16](chapters/16_Cross_Anchor_Comparative_Analysis.md)
 
 ### For Developers
 
@@ -99,9 +102,9 @@ When updating documentation:
 
 ## Version
 
-Documentation version: January 2026
+Documentation version: April 2026
 
-Corresponds to MAPseq processing pipeline as of January 2026.
+Corresponds to MAPseq processing pipeline as of April 2026.
 
 ---
 

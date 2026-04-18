@@ -139,21 +139,21 @@
 <p>$$\left(1 - (1-p_e)^n\right) \cdot N_0 = N_{obs}$$</p>
 <p>We solve this symbolically for pₑ, selecting solutions in (0, 1).</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities()</code> (uniform)</p>
-<div class="codehilite"><pre><span></span><code><span class="n">pe_solutions</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
-    <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe</span><span class="p">)</span><span class="o">**</span><span class="nb">len</span><span class="p">(</span><span class="n">projections</span><span class="p">))</span> <span class="o">*</span> <span class="n">N0_value</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">,</span> <span class="n">pe</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">pe_solutions = sympy.solve(
+    (1 - (1 - pe)**len(projections)) * N0_value - observed_cells, pe, force=True
+)
+</code></pre>
 
 <h3 id="motif-probability">Motif Probability</h3>
 <p>Under this model, the probability of a motif with k regions:</p>
 <p>$$P(k \text{ regions}) = p_e^k \cdot (1-p_e)^{(R-k)}$$</p>
 <p>Where R = total number of regions.</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (uniform pₑ calculation)</p>
-<div class="codehilite"><pre><span></span><code><span class="n">motif_probs_uniform</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="n">n</span><span class="p">:</span> <span class="p">(</span><span class="n">pe_num</span> <span class="o">**</span> <span class="n">n</span><span class="p">)</span> <span class="o">*</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">pe_num</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">total_regions</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span>
-    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">total_regions</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">motif_probs_uniform = {
+    n: (pe_num ** n) * ((1 - pe_num) ** (total_regions - n))
+    for n in range(1, total_regions + 1)
+}
+</code></pre>
 
 <h3 id="limitations">Limitations</h3>
 <ul>
@@ -172,18 +172,18 @@
 <p>$$P(\text{motif } M) = \prod_{i \in M} p_i \cdot \prod_{j \notin M} (1 - p_j)$$</p>
 <p><strong>Interpretation:</strong> Treats each region's projection as an independent Bernoulli trial with region-specific success probability.</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_region_specific()</code></p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_motif_probabilities_region_specific</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">,</span> <span class="n">region_probs_dict</span><span class="p">,</span> <span class="n">region_names</span><span class="p">):</span>
-    <span class="n">motif_probs_rs</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">motif_regions</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">):</span>
-        <span class="n">prob</span> <span class="o">=</span> <span class="mf">1.0</span>
-        <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">region_names</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">motif_regions</span><span class="p">:</span>
-                <span class="n">prob</span> <span class="o">*=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># p_i</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">prob</span> <span class="o">*=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>  <span class="c1"># (1 - p_i)</span>
-        <span class="n">motif_probs_rs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
-    <span class="k">return</span> <span class="n">motif_probs_rs</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">def compute_motif_probabilities_region_specific(motif_labels, region_probs_dict, region_names):
+    motif_probs_rs = {}
+    for i, motif_regions in enumerate(motif_labels):
+        prob = 1.0
+        for region in region_names:
+            if region in motif_regions:
+                prob *= region_probs_dict.get(region, 0.0)  # p_i
+            else:
+                prob *= (1.0 - region_probs_dict.get(region, 0.0))  # (1 - p_i)
+        motif_probs_rs[i] = prob
+    return motif_probs_rs
+</code></pre>
 
 <h3 id="limitations_1">Limitations</h3>
 <ul>
@@ -197,58 +197,58 @@
 <p>We compute <strong>P(B|A)</strong> = probability of projecting to region B, given projection to region A:</p>
 <p>$$P(B|A) = \frac{\text{neurons projecting to both A and B}}{\text{neurons projecting to A}}$$</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::gen_prob_matrix()</code></p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">gen_prob_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">cells</span><span class="p">,</span> <span class="n">regions</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
-    <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">regions</span><span class="p">,</span> <span class="n">regions</span><span class="p">))</span>  <span class="c1"># area B x area A</span>
+<pre class="codehilite"><code class="language-python">def gen_prob_matrix(df: pd.DataFrame):
+    data = df.to_numpy(copy=True)
+    cells, regions = data.shape
+    mat = np.zeros((regions, regions))  # area B x area A
 
-    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>  <span class="c1"># For each region A</span>
-        <span class="n">ids_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="n">col</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">sub_col</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">ids_col</span><span class="p">]</span>
+    for col in range(regions):  # For each region A
+        ids_col = np.where(data[:, col] != 0)[0]
+        sub_col = data[ids_col]
 
-        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>  <span class="c1"># For each region B</span>
-            <span class="n">ids_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">sub_col</span><span class="p">[:,</span> <span class="n">row</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">ids_col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">prob</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">prob</span> <span class="o">=</span> <span class="n">ids_row</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">ids_col</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># P(B|A)</span>
-            <span class="n">mat</span><span class="p">[</span><span class="n">col</span><span class="p">,</span> <span class="n">row</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
+        for row in range(regions):  # For each region B
+            ids_row = np.where(sub_col[:, row] != 0)[0]
+            if ids_col.shape[0] == 0:
+                prob = 0
+            else:
+                prob = ids_row.shape[0] / ids_col.shape[0]  # P(B|A)
+            mat[col, row] = prob
 
-    <span class="k">return</span> <span class="n">mat</span>
-</code></pre></div>
+    return mat
+</code></pre>
 
 <h3 id="motif-probability-using-chain-rule">Motif Probability Using Chain Rule</h3>
 <p>For multi-region motifs, we use the chain rule of probability:</p>
 <p>$$P(A, B, C, ...) = P(A) \cdot P(B|A) \cdot P(C|B) \cdot ...$$</p>
 <p>Regions are sorted alphabetically for consistent ordering.</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::compute_motif_probabilities_correlated()</code></p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_motif_probabilities_correlated</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">,</span> <span class="n">region_probs_dict</span><span class="p">,</span> 
-                                           <span class="n">cond_prob_matrix</span><span class="p">,</span> <span class="n">region_names</span><span class="p">):</span>
-    <span class="n">motif_probs_corr</span> <span class="o">=</span> <span class="p">{}</span>
+<pre class="codehilite"><code class="language-python">def compute_motif_probabilities_correlated(motif_labels, region_probs_dict, 
+                                           cond_prob_matrix, region_names):
+    motif_probs_corr = {}
 
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">motif_regions</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">motif_regions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="c1"># Single region: use marginal probability</span>
-            <span class="n">region</span> <span class="o">=</span> <span class="n">motif_regions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">motif_probs_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Multi-region: use chain rule</span>
-            <span class="n">sorted_regions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">motif_regions</span><span class="p">)</span>
+    for i, motif_regions in enumerate(motif_labels):
+        if len(motif_regions) == 1:
+            # Single region: use marginal probability
+            region = motif_regions[0]
+            motif_probs_corr[i] = region_probs_dict.get(region, 0.0)
+        else:
+            # Multi-region: use chain rule
+            sorted_regions = sorted(motif_regions)
 
-            <span class="c1"># Start with first region&#39;s marginal probability</span>
-            <span class="n">prob</span> <span class="o">=</span> <span class="n">region_probs_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span>
+            # Start with first region's marginal probability
+            prob = region_probs_dict.get(sorted_regions[0], 0.0)
 
-            <span class="c1"># Multiply by conditional probabilities</span>
-            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">)):</span>
-                <span class="n">prev_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">curr_region</span> <span class="o">=</span> <span class="n">sorted_regions</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
-                <span class="n">cond_prob</span> <span class="o">=</span> <span class="n">cond_prob_matrix</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prev_region</span><span class="p">,</span> <span class="n">curr_region</span><span class="p">]</span>
-                <span class="n">prob</span> <span class="o">*=</span> <span class="n">cond_prob</span>
+            # Multiply by conditional probabilities
+            for j in range(1, len(sorted_regions)):
+                prev_region = sorted_regions[j-1]
+                curr_region = sorted_regions[j]
+                cond_prob = cond_prob_matrix.loc[prev_region, curr_region]
+                prob *= cond_prob
 
-            <span class="n">motif_probs_corr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">prob</span>
+            motif_probs_corr[i] = prob
 
-    <span class="k">return</span> <span class="n">motif_probs_corr</span>
-</code></pre></div>
+    return motif_probs_corr
+</code></pre>
 
 <h3 id="limitations_2">Limitations</h3>
 <ul>
@@ -322,9 +322,9 @@ $$P(motif) = \frac{observed_count(motif) + \alpha}{N0_P60 + \alpha \times total_
 - Use anchor probabilities with local N₀:<br />
   $$Expected_{motif} = P_{P60}(motif) \times N_0^{local}$$</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (region-specific probability calculation)</p>
-<div class="codehilite"><pre><span></span><code><span class="n">psdict_for_expected</span> <span class="o">=</span> <span class="n">anchor_probs_loaded</span> <span class="k">if</span> <span class="n">anchor_probs_loaded</span> <span class="k">else</span> <span class="n">psdict_region_specific</span>
-<span class="n">corr_matrix_for_expected</span> <span class="o">=</span> <span class="n">anchor_corr_loaded</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">psdict_for_expected = anchor_probs_loaded if anchor_probs_loaded else psdict_region_specific
+corr_matrix_for_expected = anchor_corr_loaded
+</code></pre>
 
 <h2 id="model-selection">Model Selection</h2>
 <h3 id="recommendations">Recommendations</h3>

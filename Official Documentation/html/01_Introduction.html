@@ -94,9 +94,9 @@
 <ol>
 <li><strong>Preprocessing and aggregation</strong>: Use <code>preprocess_and_aggregate.py</code> to prepare NBCM files and produce an aggregated matrix.</li>
 <li><strong>Run the pipeline</strong>: Edit <code>all_commands.txt</code> (or use <code>all_commands_all-parameters.txt</code>) to match your paths and samples, then from the repository root make the script executable if needed (<code>chmod +x run_commands.sh</code>) and run <strong><code>./run_commands.sh</code></strong>. The script executes each line of the command file in order (main processing and helper scripts) and logs output.</li>
-<li><strong>Interpret outputs</strong>: Use the output structure and helper script results as described in the documentation.</li>
+<li><strong>Inspect outputs</strong>: Use the output structure and helper script results as described in the documentation (starting with <a href="08_Output_Files_Interpretation.html">Chapter 8</a>).</li>
 </ol>
-<p><strong>Execution methods</strong>: (1) <strong>Batch (recommended)</strong>: Edit <code>all_commands.txt</code> (or <code>all_commands_all-parameters.txt</code>), make the script executable if needed (<code>chmod +x run_commands.sh</code>), and run <code>./run_commands.sh</code> from the repository root. (2) <strong>Manual</strong>: Run preprocessing, then <code>process-nbcm-tsv.py</code>, then helper scripts individually in order. (3) <strong>GUI</strong>: Experimental GUI options (untested) are documented in <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>. After the pipeline, you can run quality control (<code>postprocessing_checks.py</code>), figure generation (<code>figure_generation/generate_figure_from_outputs.py</code>), and conclusions scripts (see <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Interpretation</a>).</p>
+<p><strong>Execution methods</strong>: (1) <strong>Batch (recommended)</strong>: Edit <code>all_commands.txt</code> (or <code>all_commands_all-parameters.txt</code>), make the script executable if needed (<code>chmod +x run_commands.sh</code>), and run <code>./run_commands.sh</code> from the repository root. (2) <strong>Manual</strong>: Run preprocessing, then <code>process-nbcm-tsv.py</code>, then helper scripts individually in order. (3) <strong>GUI</strong>: Experimental GUI options (untested) are documented in <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>. Optional QC: <code>postprocessing_checks.py</code> (see <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Structure</a>). Optional lab batch scripts (figure aggregation, conclusions generation) are <strong>not</strong> part of the standard end-user path; see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>.</p>
 <h2 id="before-you-run">Before you run</h2>
 <ol>
 <li><strong>Process fastq with the CSHL mapseq-processing pipeline</strong>: The pipeline expects NBCM (neural barcode count matrix) files produced by the <a href="https://github.com/ZadorLaboratory/mapseq-processing">CSHL mapseq-processing Python Pipeline</a>. Run that pipeline first to obtain <code>.nbcm.tsv</code> files.</li>
@@ -151,63 +151,63 @@
 <li>Effect Size ≈ 0: Motif frequency matches expectation</li>
 </ul>
 <h2 id="pipeline-workflow_1">Pipeline Workflow</h2>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase1</span><span class="p">[</span><span class="s">&quot;Phase 1: Data Preparation&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Raw</span><span class="p">[</span><span class="n">Raw</span><span class="w"> </span><span class="n">UMI</span><span class="w"> </span><span class="n">Count</span><span class="w"> </span><span class="n">Matrix</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">neurons</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">brain</span><span class="w"> </span><span class="n">regions</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Filter</span><span class="p">[</span><span class="n">Quality</span><span class="w"> </span><span class="n">Filtering</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">thresholds</span><span class="p">,</span><span class="w"> </span><span class="n">negative</span><span class="w"> </span><span class="n">controls</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Filter</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Norm</span><span class="p">[</span><span class="n">Row</span><span class="w"> </span><span class="n">Normalization</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">divide</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">row</span><span class="w"> </span><span class="n">max</span><span class="p">]</span>
-<span class="w">    </span><span class="k">end</span>
+<pre class="codehilite"><code class="language-mermaid">flowchart TD
+    subgraph Phase1[&quot;Phase 1: Data Preparation&quot;]
+        Raw[Raw UMI Count Matrix&lt;br/&gt;neurons × brain regions] --&gt; Filter[Quality Filtering&lt;br/&gt;thresholds, negative controls]
+        Filter --&gt; Norm[Row Normalization&lt;br/&gt;divide by row max]
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase2</span><span class="p">[</span><span class="s">&quot;Phase 2: Population Estimation&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Norm</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Proj</span><span class="p">[</span><span class="n">Projection</span><span class="w"> </span><span class="n">Counts</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">s_k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">neurons</span><span class="w"> </span><span class="n">projecting</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="n">k</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Proj</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">N0</span><span class="p">[</span><span class="n">Estimate</span><span class="w"> </span><span class="n">N₀</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">total</span><span class="w"> </span><span class="n">neuron</span><span class="w"> </span><span class="n">population</span><span class="p">]</span>
-<span class="w">    </span><span class="k">end</span>
+    subgraph Phase2[&quot;Phase 2: Population Estimation&quot;]
+        Norm --&gt; Proj[Projection Counts&lt;br/&gt;s_k = neurons projecting to region k]
+        Proj --&gt; N0[Estimate N₀&lt;br/&gt;total neuron population]
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase3</span><span class="p">[</span><span class="s">&quot;Phase 3: Anchor Model System&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">N0</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">AnchorCheck</span><span class="p">{</span><span class="n">Is</span><span class="w"> </span><span class="n">P60</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">Anchor</span><span class="o">?</span><span class="p">}</span>
-<span class="w">        </span><span class="n">AnchorCheck</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">Yes</span><span class="o">|</span><span class="w"> </span><span class="n">SaveAnchor</span><span class="p">[</span><span class="n">Save</span><span class="w"> </span><span class="n">Anchor</span><span class="w"> </span><span class="n">Probabilities</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;&amp;</span><span class="w"> </span><span class="n">Correlation</span><span class="w"> </span><span class="n">Matrix</span><span class="p">]</span>
-<span class="w">        </span><span class="n">AnchorCheck</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">No</span><span class="o">|</span><span class="w"> </span><span class="n">LoadAnchor</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">P60</span><span class="w"> </span><span class="n">Anchor</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">Probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="k">end</span>
+    subgraph Phase3[&quot;Phase 3: Anchor Model System&quot;]
+        N0 --&gt; AnchorCheck{Is P60&lt;br/&gt;Anchor?}
+        AnchorCheck --&gt;|Yes| SaveAnchor[Save Anchor Probabilities&lt;br/&gt;&amp; Correlation Matrix]
+        AnchorCheck --&gt;|No| LoadAnchor[Load P60 Anchor&lt;br/&gt;Probabilities]
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase4</span><span class="p">[</span><span class="s">&quot;Phase 4: Probability Models&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">SaveAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model1</span><span class="p">[</span><span class="n">Model</span><span class="w"> </span><span class="mh">1</span><span class="o">:</span><span class="w"> </span><span class="n">Uniform</span><span class="w"> </span><span class="n">pₑ</span><span class="p">]</span>
-<span class="w">        </span><span class="n">SaveAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model2</span><span class="p">[</span><span class="n">Model</span><span class="w"> </span><span class="mh">2</span><span class="o">:</span><span class="w"> </span><span class="n">Region</span><span class="o">-</span><span class="n">specific</span><span class="w"> </span><span class="n">pᵢ</span><span class="p">]</span>
-<span class="w">        </span><span class="n">SaveAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model3</span><span class="p">[</span><span class="n">Model</span><span class="w"> </span><span class="mh">3</span><span class="o">:</span><span class="w"> </span><span class="n">Correlated</span><span class="w"> </span><span class="n">Binomial</span><span class="p">]</span>
-<span class="w">        </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model1</span>
-<span class="w">        </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model2</span>
-<span class="w">        </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Model3</span>
-<span class="w">    </span><span class="k">end</span>
+    subgraph Phase4[&quot;Phase 4: Probability Models&quot;]
+        SaveAnchor --&gt; Model1[Model 1: Uniform pₑ]
+        SaveAnchor --&gt; Model2[Model 2: Region-specific pᵢ]
+        SaveAnchor --&gt; Model3[Model 3: Correlated Binomial]
+        LoadAnchor --&gt; Model1
+        LoadAnchor --&gt; Model2
+        LoadAnchor --&gt; Model3
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase5</span><span class="p">[</span><span class="s">&quot;Phase 5: Statistical Testing&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Model1</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Binom1</span><span class="p">[</span><span class="n">Binomial</span><span class="w"> </span><span class="n">Tests</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">motif</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="n">distribution</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Model2</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Binom2</span><span class="p">[</span><span class="n">Binomial</span><span class="w"> </span><span class="n">Tests</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">specific</span><span class="w"> </span><span class="n">motif</span><span class="w"> </span><span class="n">probabilities</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Model3</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Binom3</span><span class="p">[</span><span class="n">Binomial</span><span class="w"> </span><span class="n">Tests</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">correlated</span><span class="w"> </span><span class="n">probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="k">end</span>
+    subgraph Phase5[&quot;Phase 5: Statistical Testing&quot;]
+        Model1 --&gt; Binom1[Binomial Tests&lt;br/&gt;motif size distribution]
+        Model2 --&gt; Binom2[Binomial Tests&lt;br/&gt;specific motif probabilities]
+        Model3 --&gt; Binom3[Binomial Tests&lt;br/&gt;correlated probabilities]
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="n">Phase6</span><span class="p">[</span><span class="s">&quot;Phase 6: Helper Scripts&quot;</span><span class="p">]</span>
-<span class="w">        </span><span class="n">Binom1</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Helper</span><span class="p">[</span><span class="n">Cross</span><span class="o">-</span><span class="n">age</span><span class="w"> </span><span class="n">Analyses</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">Trajectories</span><span class="p">,</span><span class="w"> </span><span class="n">Clustering</span><span class="p">,</span><span class="w"> </span><span class="n">etc</span><span class="p">.]</span>
-<span class="w">        </span><span class="n">Binom2</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Helper</span>
-<span class="w">        </span><span class="n">Binom3</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Helper</span>
-<span class="w">    </span><span class="k">end</span>
-</code></pre></div>
+    subgraph Phase6[&quot;Phase 6: Helper Scripts&quot;]
+        Binom1 --&gt; Helper[Cross-age Analyses&lt;br/&gt;Trajectories, Clustering, etc.]
+        Binom2 --&gt; Helper
+        Binom3 --&gt; Helper
+    end
+</code></pre>
 
 <h2 id="output-structure">Output Structure</h2>
 <p>Results are organized in a hierarchical directory structure:</p>
-<div class="codehilite"><pre><span></span><code><span class="mf">02</span><span class="n">_output</span><span class="o">/</span>
-<span class="err">├──</span><span class="w"> </span><span class="err">{</span><span class="n">age</span><span class="err">}</span><span class="o">/</span><span class="w">                          </span><span class="err">#</span><span class="w"> </span><span class="n">P3</span><span class="p">,</span><span class="w"> </span><span class="n">P12</span><span class="p">,</span><span class="w"> </span><span class="n">P20</span><span class="p">,</span><span class="w"> </span><span class="n">P60</span>
-<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="o">/</span><span class="w">         </span><span class="err">#</span><span class="w"> </span><span class="n">Filter</span><span class="w"> </span><span class="n">parameter</span><span class="w"> </span><span class="n">set</span>
-<span class="err">│</span><span class="w">       </span><span class="err">├──</span><span class="w"> </span><span class="n">analysis</span><span class="o">/</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">uniform</span><span class="o">/</span><span class="w">           </span><span class="err">#</span><span class="w"> </span><span class="n">Uniform</span><span class="w"> </span><span class="n">model</span><span class="w"> </span><span class="n">results</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">region_specific</span><span class="o">/</span><span class="w">   </span><span class="err">#</span><span class="w"> </span><span class="n">Region</span><span class="o">-</span><span class="n">specific</span><span class="w"> </span><span class="n">model</span><span class="w"> </span><span class="n">results</span>
-<span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">correlated</span><span class="o">/</span><span class="w">       </span><span class="err">#</span><span class="w"> </span><span class="n">Correlated</span><span class="w"> </span><span class="n">model</span><span class="w"> </span><span class="n">results</span>
-<span class="err">│</span><span class="w">       </span><span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">sample</span><span class="err">}</span><span class="n">_</span><span class="o">*</span><span class="mf">.</span><span class="n">csv</span><span class="w">         </span><span class="err">#</span><span class="w"> </span><span class="n">Per</span><span class="o">-</span><span class="n">sample</span><span class="w"> </span><span class="n">outputs</span>
-<span class="err">└──</span><span class="w"> </span><span class="err">{</span><span class="n">parameterization</span><span class="err">}</span><span class="n">_helpers</span><span class="o">/</span><span class="w">    </span><span class="err">#</span><span class="w"> </span><span class="n">Helper</span><span class="w"> </span><span class="n">script</span><span class="w"> </span><span class="n">outputs</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">01</span><span class="n">_motif_analysis_per_animal</span><span class="o">/</span>
-<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">05</span><span class="n">_motif_analysis</span><span class="o">/</span>
-<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="mf">...</span>
-</code></pre></div>
+<pre class="codehilite"><code>02_output/
+├── {age}/                          # P3, P12, P20, P60
+│   └── {parameterization}/         # Filter parameter set
+│       ├── analysis/
+│       │   ├── uniform/           # Uniform model results
+│       │   ├── region_specific/   # Region-specific model results
+│       │   └── correlated/       # Correlated model results
+│       └── {sample}_*.csv         # Per-sample outputs
+└── {parameterization}_helpers/    # Helper script outputs
+    ├── 01_motif_analysis_per_animal/
+    ├── 05_motif_analysis/
+    └── ...
+</code></pre>
 
 <h2 id="documentation-organization">Documentation Organization</h2>
-<p>This documentation is organized into 14 chapters:</p>
+<p>This documentation is organized into 16 chapters:</p>
 <ol>
 <li><strong>Introduction</strong> (this chapter) - Overview and key concepts</li>
 <li><strong>Installation and Setup</strong> - System requirements and installation</li>
@@ -216,20 +216,22 @@
 <li><strong>Statistical Methods</strong> - N₀ estimation, binomial testing</li>
 <li><strong>Probability Models</strong> - All probability models explained</li>
 <li><strong>Helper Scripts</strong> - Cross-age analysis scripts</li>
-<li><strong>Output Files and Interpretation</strong> - Understanding results</li>
+<li><strong>Output Files and Structure</strong> - Paths, filenames, and column reference</li>
 <li><strong>Code Review</strong> - Architecture and implementation details</li>
 <li><strong>Mathematical Functions Reference</strong> - All formulas with code references</li>
-<li><strong>Stability Analysis</strong> - Temporal stability framework</li>
+<li><strong>Stability Analysis</strong> - Generic stability metrics framework</li>
 <li><strong>Troubleshooting and Best Practices</strong> - Common issues and solutions</li>
 <li><strong>References and Appendices</strong> - Code references, notation glossary</li>
-<li><strong>Experimental Features</strong> - Untested GUI wizards (use bash + command file for production)</li>
+<li><strong>Experimental Features</strong> - GUI wizards and maintainer batch tools</li>
+<li><strong>Trajectory Results</strong> - Helper 15 file/method reference (no bundled results)</li>
+<li><strong>Cross-Anchor Analysis</strong> - Conceptual checklist for anchor comparisons</li>
 </ol>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li><strong>New users</strong>: Proceed to <a href="02_Installation_Setup.html">Chapter 2: Installation and Setup</a></li>
 <li><strong>Data preparation</strong>: See <a href="03_Data_Preparation.html">Chapter 3: Data Preparation</a></li>
 <li><strong>Understanding methods</strong>: See <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a> and <a href="06_Probability_Models.html">Chapter 6: Probability Models</a></li>
-<li><strong>Interpreting results</strong>: See <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Interpretation</a></li>
+<li><strong>Output layout</strong>: See <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Structure</a></li>
 </ul>
 <hr />
 <p><em>For detailed code implementation, see <a href="09_Code_Review.html">Chapter 9: Code Review</a>. For all mathematical formulas, see <a href="10_Mathematical_Functions.html">Chapter 10: Mathematical Functions Reference</a>.</em></p>

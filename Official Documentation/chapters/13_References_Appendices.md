@@ -12,18 +12,28 @@
 
 ### Helper Scripts
 
-| File | Purpose | Key Statistical Tests |
-|------|---------|----------------------|
-| `01_motif_analysis_per_animal.py` | Per-animal analysis | Kruskal-Wallis, JSD |
-| `02_projection_analysis.py` | Projection analysis | PCA, clustering |
-| `03_composition.py` | Composition analysis | Descriptive statistics |
-| `04_proportions_over_time_stats.py` | Proportions over time | Chi-square, CLR |
-| `05_motif_analysis.py` | Motif analysis | Welch's t-test, KS test, JSD |
-| `06_all_motif_divergence.py` | Motif divergence | Visualization |
-| `07_motif_significange_trajectories.py` | Trajectory analysis | Fisher's exact test |
-| `08_motif_clustering.py` | Motif clustering | Clustering algorithms |
-| `09_plot_normalized_projection_strength_data.py` | Projection strength | Visualization |
-| `13_aggregate_projection_summaries.py` | Aggregation | Data aggregation |
+| File | Purpose | Tier | Key methods |
+|------|---------|------|-------------|
+| `01_motif_analysis_per_animal.py` | Per-animal analysis | Core | Kruskal-Wallis, JSD |
+| `02_projection_analysis.py` | Projection analysis | Core | PCA, clustering |
+| `03_composition.py` | Composition | Core | Descriptive |
+| `04_proportions_over_time_stats.py` | Proportions over time | Core | Chi-square, CLR |
+| `05_motif_analysis.py` | Motif analysis | Core | Welch, KS, JSD |
+| `06_all_motif_divergence.py` | Motif divergence plots | Core | Visualization |
+| `07_motif_significange_trajectories.py` | Effect-size trajectories | Core | Transition **z-test** (log counts), optional FDR |
+| `08_motif_clustering.py` | Motif clustering | Core | Clustering |
+| `09_plot_normalized_projection_strength_data.py` | Projection strength | Core | Visualization |
+| `10_plot_per_cell_projection_strength_across_ages.py` | Per-cell lines across ages | Optional | Visualization |
+| `10_compare_datasets_pipeline.py` | Two-way dataset compare | Maintainer | External data |
+| `11_compare_vsv_mapseq_two_way.py` | VSV vs MapSeq | Maintainer | External data |
+| `12_compare_datasets_pipeline_mapseq.py` | Three-way compare | Maintainer | External data |
+| `13_aggregate_projection_summaries.py` | Aggregate summaries | Core | Aggregation |
+| `14_model_group_comparison.py` | Model comparison | Optional | Plots / stats |
+| `15_volcano_trajectories.py` | Trajectory methods | Core | Permutation, FDA, mixed-effects, etc. |
+| `16_power_analysis.py` | Power / equivalence | Maintainer | See Chapter 14 |
+| `17_jsd_cross_source_summary.py` | JSD / homogeneity summary | Optional | Chi-square, Monte Carlo |
+| `18_mean_jsd_transition_tests.py` | Mean JS² transition tests | Optional | Permutation, bootstrap |
+| `00_teleporting_barcode_detection.py` | Batch barcode QC | Maintainer | Project-specific mappings |
 
 ### Code Line References
 
@@ -50,7 +60,7 @@
 #### Helper Scripts
 
 - **Kruskal-Wallis**: `helpers/scripts/01_motif_analysis_per_animal.py`
-- **Fisher's Exact Test**: `helpers/scripts/07_motif_significange_trajectories.py`
+- **Transition z-test (helper 07)**: `helpers/scripts/07_motif_significange_trajectories.py`
 
 ## Mathematical Notation Glossary
 
@@ -75,7 +85,7 @@
 |------|---------|-----------------|----------------|
 | **Binomial Test** | Motif significance | Observed = Expected | `scipy.stats.binomtest` |
 | **Kruskal-Wallis** | Frequency distribution comparison | No difference across ages | `scipy.stats.kruskal` |
-| **Fisher's Exact Test** | Transition significance | No change between stages | `scipy.stats.fisher_exact` |
+| **Transition z-test (helper 07)** | Effect-size change between stages | No change in log-count–derived effect size | Normal approx.; see Chapter 5 |
 | **Welch's t-test** | Mean comparison | No difference in means | `scipy.stats.ttest_ind` |
 | **Kolmogorov-Smirnov** | Distribution comparison | Distributions identical | `scipy.stats.ks_2samp` |
 | **Chi-square** | Independence test | Proportions independent of age | `scipy.stats.chi2_contingency` |
@@ -133,14 +143,14 @@
 - **Binomial Testing**: Standard statistical testing
 - **Bonferroni Correction**: Multiple testing correction
 - **Kruskal-Wallis Test**: Non-parametric ANOVA
-- **Fisher's Exact Test**: Exact test for 2×2 tables
+- **Transition z-tests (helper 07)**: Consecutive-stage effect-size contrasts
 - **Jensen-Shannon Divergence**: Information-theoretic distance
 
 ## Change Log
 
 ### Version History
 
-**Current Version**: As of January 2026
+**Current Version**: As of April 2026
 
 **Key Features**:
 - Multiple probability models (uniform, region-specific, correlated, and additional models)
@@ -189,10 +199,20 @@
 - `-r, --min_body_to_target_ratio`: Injection/target ratio (default: 10)
 - `-u, --target_umi_min`: Target UMI threshold (default: 2)
 - `-a, --alpha`: Significance threshold (default: 0.05)
+- `-f, --apply_outlier_filtering`: Enable outlier filtering (mean + 2×std)
+- `--force_user_threshold`: Use the user’s `-u` value without automatic overrides
 - `--is-anchor-model`: Mark as anchor model
-- `--anchor-model-file`: Path to anchor probabilities
-- `--anchor-correlation-file`: Path to anchor correlation matrix
-- `--model-type`: Which models to run (default: all)
+- `--anchor-model-file`: Path to anchor probabilities CSV
+- `--anchor-correlation-file`: Path to anchor correlation matrix CSV
+- `--model-type`: One of `uniform`, `region_specific`, `correlated`, `empirical`, `smoothed_empirical`, `max_entropy`, `hierarchical_correlations`, `negative_binomial`, `zero_inflated`, `bayesian_hierarchical`, `ml_nonparametric`, `all` (default: `all`)
+- `--smoothing-alpha`: Smoothing α for `smoothed_empirical` (default: 1.0)
+- `--skip-sections`: Comma-separated: `visualizations`, `clustering`, `heatmaps`
+- `--illustrator-volcano-dir`: Directory for illustrator-ready uniform volcano SVG
+- `--illustrator-report-ranges-only`: With illustrator dir: append ranges only, no SVG
+- `--illustrator-xlim`, `--illustrator-ylim`: Axis limits for illustrator volcano
+- `-A`, `-B`: Legacy special-area flags (deprecated for most workflows)
+
+Run `python process-nbcm-tsv.py --help` for the authoritative list.
 
 ## Appendix C: Output File Structure
 
@@ -219,7 +239,11 @@
 └── {parameterization}_helpers/
     ├── 01_motif_analysis_per_animal/
     ├── 05_motif_analysis/
+    ├── 07_input/                      # copied upsetplot CSVs for 07/15
     ├── 07_motif_significange_trajectories/
+    ├── 15_volcano_trajectories/
+    ├── 17_jsd_cross_source/           # optional
+    ├── 18_mean_jsd_transition_tests/  # optional
     └── ...
 ```
 
@@ -239,13 +263,12 @@ $$P(motif) = \prod_{i \in M} p_i \cdot \prod_{j \notin M} (1 - p_j)$$
 **Correlated Probability**:
 $$P(A, B, C) = P(A) \cdot P(B|A) \cdot P(C|B)$$
 
-### Key Interpretations
+### Key readings (definitions)
 
-- **Effect Size > 0**: Over-represented
-- **Effect Size < 0**: Under-represented
-- **JSD < 0.05**: Very similar (stable)
-- **JSD > 0.2**: Large difference (unstable)
-- **Kruskal-Wallis p < 0.05**: Significant change over time
+- **Effect Size > 0**: Observed exceeds expected under the model
+- **Effect Size < 0**: Observed below expected
+- **JSD**: Similarity metric; thresholds are context- and implementation-dependent (see helper docs)
+- **Kruskal-Wallis p < α**: Reject equal distributions across groups (at chosen α)
 
 ---
 

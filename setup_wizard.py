@@ -272,7 +272,9 @@ def print_post_installation_instructions(repo_path):
         "03_composition.py",
         "04_proportions_over_time_stats.py",
         "05_motif_analysis.py",
+        "18_mean_jsd_transition_tests.py",
         "06_all_motif_divergence.py",
+        "17_jsd_cross_source_summary.py",
         "07_motif_significange_trajectories.py",
         "08_motif_clustering.py",
         "09_plot_normalized_projection_strength_data.py",
@@ -283,6 +285,8 @@ def print_post_installation_instructions(repo_path):
         print(f"   python {os.path.join(repo_path, 'helpers', 'scripts', script)}")
     
     print("\n   Note: Scripts 05 must run before 06 and 07.")
+    print("         Script 17 requires outputs from 01 and 05 (run after both).
+    print("         Script 18 requires outputs from 05.")")
     print("         Script 07 must run before 08.")
     
     print("\n4️⃣  BATCH EXECUTION (alternative to running scripts individually):")

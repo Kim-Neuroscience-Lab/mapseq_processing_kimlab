@@ -113,9 +113,9 @@
 6. Return roots and π expression</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
 <p><strong>Root Selection</strong> (in main script):</p>
-<div class="codehilite"><pre><span></span><code><span class="n">valid_N0</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span> <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">is_real</span> <span class="ow">and</span> <span class="n">root</span> <span class="o">&gt;</span> <span class="n">observed_cells</span><span class="p">]</span>
-<span class="n">N0_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">valid_N0</span><span class="p">)</span>  <span class="c1"># Largest valid root</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">valid_N0 = [root for root in roots if root.is_real and root &gt; observed_cells]
+N0_value = max(valid_N0)  # Largest valid root
+</code></pre>
 
 <h4 id="probability-model-calculations">Probability Model Calculations</h4>
 <p><strong>Uniform Model</strong>: <code>compute_motif_probabilities()</code> in process-nbcm-tsv.py</p>
@@ -125,26 +125,26 @@
 <h4 id="statistical-testing">Statistical Testing</h4>
 <p><strong>Function</strong>: Uses <code>scipy.stats.binomtest()</code></p>
 <p><strong>Implementation</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">p_value</span> <span class="o">=</span> <span class="n">binomtest</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">observed</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">N0_value</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="mf">1e-10</span><span class="p">))</span><span class="o">.</span><span class="n">pvalue</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">p_value = binomtest(int(observed), n=int(N0_value), p=max(prob, 1e-10)).pvalue
+</code></pre>
 
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (binomial testing)</p>
 <h2 id="data-flow">Data Flow</h2>
 <h3 id="main-processing-flow">Main Processing Flow</h3>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">Load</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">NBCM</span><span class="w"> </span><span class="n">File</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">load_df</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Filter</span><span class="p">[</span><span class="n">Quality</span><span class="w"> </span><span class="n">Filtering</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">clean_and_filter</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Filter</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Norm</span><span class="p">[</span><span class="n">Normalize</span><span class="w"> </span><span class="n">Rows</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">normalize_rows</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Norm</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Proj</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Projections</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">calculate_projections_from_matrix</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Proj</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">N0</span><span class="p">[</span><span class="n">Estimate</span><span class="w"> </span><span class="n">N₀</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">solve_for_roots</span><span class="p">]</span>
-<span class="w">    </span><span class="n">N0</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Anchor</span><span class="p">{</span><span class="n">Anchor</span><span class="w"> </span><span class="n">Model</span><span class="err">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">Yes</span><span class="o">|</span><span class="w"> </span><span class="n">LoadAnchor</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">P60</span><span class="w"> </span><span class="n">Probabilities</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">load_anchor_model</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">No</span><span class="o">|</span><span class="w"> </span><span class="n">LocalProbs</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Local</span><span class="w"> </span><span class="n">Probabilities</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">calculate_probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Model</span><span class="w"> </span><span class="n">Probabilities</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">compute_motif_probabilities_</span><span class="o">*</span><span class="p">]</span>
-<span class="w">    </span><span class="n">LocalProbs</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span>
-<span class="w">    </span><span class="n">Models</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Stats</span><span class="p">[</span><span class="n">Statistical</span><span class="w"> </span><span class="n">Testing</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">binomtest</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Stats</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Effect</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Effect</span><span class="w"> </span><span class="n">Sizes</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Effect</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Viz</span><span class="p">[</span><span class="n">Generate</span><span class="w"> </span><span class="n">Visualizations</span><span class="o">&lt;</span><span class="n">br</span><span class="o">/&gt;</span><span class="n">plot_effect_significance</span><span class="p">]</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-mermaid">flowchart TD
+    Load[Load NBCM File&lt;br/&gt;load_df] --&gt; Filter[Quality Filtering&lt;br/&gt;clean_and_filter]
+    Filter --&gt; Norm[Normalize Rows&lt;br/&gt;normalize_rows]
+    Norm --&gt; Proj[Calculate Projections&lt;br/&gt;calculate_projections_from_matrix]
+    Proj --&gt; N0[Estimate N₀&lt;br/&gt;solve_for_roots]
+    N0 --&gt; Anchor{Anchor Model?}
+    Anchor --&gt;|Yes| LoadAnchor[Load P60 Probabilities&lt;br/&gt;load_anchor_model]
+    Anchor --&gt;|No| LocalProbs[Calculate Local Probabilities&lt;br/&gt;calculate_probabilities]
+    LoadAnchor --&gt; Models[Calculate Model Probabilities&lt;br/&gt;compute_motif_probabilities_*]
+    LocalProbs --&gt; Models
+    Models --&gt; Stats[Statistical Testing&lt;br/&gt;binomtest]
+    Stats --&gt; Effect[Calculate Effect Sizes]
+    Effect --&gt; Viz[Generate Visualizations&lt;br/&gt;plot_effect_significance]
+</code></pre>
 
 <h3 id="key-data-structures">Key Data Structures</h3>
 <p><strong>Matrix Format</strong>:<br />
@@ -152,39 +152,39 @@
 - <strong>Filtered</strong>: NumPy array (cells × regions)<br />
 - <strong>Normalized</strong>: NumPy array (each row normalized by max)</p>
 <p><strong>Projection Dictionary</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">projections</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;RSP&#39;</span><span class="p">:</span> <span class="n">count_RSP</span><span class="p">,</span>
-    <span class="s1">&#39;PM&#39;</span><span class="p">:</span> <span class="n">count_PM</span><span class="p">,</span>
-    <span class="o">...</span>
-<span class="p">}</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">projections = {
+    'RSP': count_RSP,
+    'PM': count_PM,
+    ...
+}
+</code></pre>
 
 <p><strong>Motif Probabilities Dictionary</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">motif_probs</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="mi">0</span><span class="p">:</span> <span class="n">prob_motif_0</span><span class="p">,</span>
-    <span class="mi">1</span><span class="p">:</span> <span class="n">prob_motif_1</span><span class="p">,</span>
-    <span class="o">...</span>
-<span class="p">}</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">motif_probs = {
+    0: prob_motif_0,
+    1: prob_motif_1,
+    ...
+}
+</code></pre>
 
 <h2 id="error-handling">Error Handling</h2>
 <h3 id="common-error-patterns">Common Error Patterns</h3>
 <p><strong>N₀ Estimation Failure</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="ow">not</span> <span class="n">valid_N0</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No valid positive real root found for N0&quot;</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">if not valid_N0:
+    raise ValueError(f&quot;No valid positive real root found for N0&quot;)
+</code></pre>
 
 <p><strong>Column Mismatch</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">assert</span> <span class="n">normalized_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">),</span> <span class="p">(</span>
-    <span class="sa">f</span><span class="s2">&quot;Mismatch: Normalized matrix columns </span><span class="si">{</span><span class="n">normalized_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, headers </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">assert normalized_matrix.shape[1] == len(columns), (
+    f&quot;Mismatch: Normalized matrix columns {normalized_matrix.shape[1]}, headers {len(columns)}&quot;
+)
+</code></pre>
 
 <p><strong>Empty Matrix</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;⚠ WARNING: Normalized matrix is empty. Skipping normalization.&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">matrix</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">if matrix.shape[0] == 0:
+    print(&quot;⚠ WARNING: Normalized matrix is empty. Skipping normalization.&quot;)
+    return matrix
+</code></pre>
 
 <h2 id="performance-considerations">Performance Considerations</h2>
 <h3 id="computational-complexity">Computational Complexity</h3>
@@ -222,20 +222,20 @@
 <h2 id="helper-script-architecture">Helper Script Architecture</h2>
 <h3 id="common-patterns">Common Patterns</h3>
 <p><strong>File Discovery</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Find all upsetplot files</span>
-<span class="n">upsetplot_files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">/*/analysis/</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">/*upsetplot*.csv&quot;</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python"># Find all upsetplot files
+upsetplot_files = glob.glob(f&quot;{base_dir}/*/analysis/{model}/*upsetplot*.csv&quot;)
+</code></pre>
 
 <p><strong>Data Aggregation</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Combine data across ages</span>
-<span class="n">combined_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df_p3</span><span class="p">,</span> <span class="n">df_p12</span><span class="p">,</span> <span class="n">df_p20</span><span class="p">,</span> <span class="n">df_p60</span><span class="p">])</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python"># Combine data across ages
+combined_data = pd.concat([df_p3, df_p12, df_p20, df_p60])
+</code></pre>
 
 <p><strong>Statistical Testing</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Kruskal-Wallis test</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">kruskal</span>
-<span class="n">h_stat</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">kruskal</span><span class="p">(</span><span class="o">*</span><span class="n">age_groups</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python"># Kruskal-Wallis test
+from scipy.stats import kruskal
+h_stat, p_value = kruskal(*age_groups)
+</code></pre>
 
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="code-quality">Code Quality</h3>

@@ -51,9 +51,14 @@ python process-nbcm-tsv.py \
 | `--is-anchor-model` | False | Mark as anchor/baseline model (P60) |
 | `--anchor-model-file` | None | Path to anchor probabilities CSV |
 | `--anchor-correlation-file` | None | Path to anchor correlation matrix CSV |
-| `--model-type` | all | Which models to run: `uniform`, `region_specific`, `correlated`, `all`, etc. |
-| `--smoothing-alpha` | 1.0 | Smoothing parameter for smoothed_empirical model |
-| `-A, --special_area_1`, `-B, --special_area_2` | — | Optional; used for some 2-region comparisons. Behavior is now derived from labels; these are legacy/deprecated. |
+| `--model-type` | `all` | One of: `uniform`, `region_specific`, `correlated`, `empirical`, `smoothed_empirical`, `max_entropy`, `hierarchical_correlations`, `negative_binomial`, `zero_inflated`, `bayesian_hierarchical`, `ml_nonparametric`, `all` |
+| `--smoothing-alpha` | 1.0 | Smoothing parameter α for `smoothed_empirical` |
+| `--skip-sections` | None | Comma-separated sections to skip: `visualizations`, `clustering`, `heatmaps` |
+| `--illustrator-volcano-dir` | None | If set, write illustrator-ready uniform volcano SVG to this directory |
+| `--illustrator-report-ranges-only` | False | With `--illustrator-volcano-dir`: append ranges CSV only, skip SVG |
+| `--illustrator-xlim` | None | Two floats: x-axis limits for illustrator volcano |
+| `--illustrator-ylim` | None | Two floats: y-axis limits for illustrator volcano |
+| `-A, --special_area_1`, `-B, --special_area_2` | — | Legacy optional region tags; most workflows use `-l` only |
 
 ## Processing Steps
 
@@ -321,7 +326,7 @@ After main processing:
 
 1. **Review outputs**: Check effect significance plots and upsetplot CSVs
 2. **Run helper scripts**: See [Chapter 7: Helper Scripts](07_Helper_Scripts.md)
-3. **Interpret results**: See [Chapter 8: Output Files and Interpretation](08_Output_Files_Interpretation.md)
+3. **Inspect outputs**: See [Chapter 8: Output Files and Structure](08_Output_Files_Interpretation.md)
 
 ---
 

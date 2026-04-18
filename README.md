@@ -3,24 +3,27 @@ MAPseq processing code based on previous works and designed to be used with the 
 
 Code found here is generally a work in progress until publication.
 
+[![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Fmatsojr22%2Fmapseq_processing_Jacobs%2Flines)](https://tokei.kojix2.net/github/matsojr22/mapseq_processing_Jacobs)
+
 ## **Before you run:**
 - Be sure that you have processed your fastq files using the [CSHL mapseq-processing Python Pipeline](https://github.com/ZadorLaboratory/mapseq-processing).
 - A preprocessing and data aggregation script is provided to prepare a individaul and combined cohort level dataframe for analysis using the per-animal sample.nbcm.tsv files produced by the CSHL pipeline. This script requires the user to match the nbcm header labels to their own sample labels to ensure all the data is correctly aligned when concatenated.
 - This script **process-nbcm-tsv.py** uses the aggregated_cleaned_matrix.tsv produced by the preprocessing and aggregation script (or individual sample.nbcm.tsv files from the CSHL pipeline if you do not have replicates). If you want to run a full analysis, you will need to ensure that the fastq processing parameters in the CSHL script have included: your samples, your negative control, and your injection columns in the output. Partial analysis is also possible at your discretion; there is a provided truncated "sample dataset" and associated "labels" which you can check out for guidance. You will need to check the arguments for each script if these requirements are unclear.
+- The [WIKI](https://github.com/matsojr22/mapseq_processing_Jacobs/wiki) can provide many answers not listed in the Readme.
 - If you are on Windows and want to **try the GUI Wizard**, then please download the most recent **setup_wizard.exe** from the releases page. Running this will automatically install the software necessary to run all the scripts, and will create a MAPseq_Wizard.exe in the installation directory that will provide a GUI for the main **process-nbcm-tsv.py** script. You will still need to preprocess in the terminal at the moment.
 - Else, from the terminal you need to setup a new conda environment, repos, and dependencies as shown below.
 - Run preprocessing then main analysis scripts.
 <br/>
 
-## Experimental EXE Installation (Windows Only)
+## EXE Installation (Windows Only)
 
 1. Download and [install Git](https://gitforwindows.org/) if not already installed. 
   
-2. Download the most recent Setup_Wizard.exe from the [releases page](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases).
+2. Download the most recent Setup_Wizard.exe from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases).
 
 3. Run the file and wait for it to complete the installation (Default location is the user directory).
 
-## CLI Installation (Default usage for large projects)
+## CLI Installation
 
 1. Install mini-conda for your operating system. [mini-conda quick command line install](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)
 
@@ -47,26 +50,19 @@ conda config --add channels bioconda
 
 ```
 cd /home/your_user/git/
-git clone https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git
+git clone https://github.com/matsojr22/mapseq_processing_Jacobs.git
 ```
 
 6. Browse into the project directory and install dependencies
 
 ```
-cd /mapseq_processing_kimlab/
+cd /mapseq_processing_Jacobs/
 pip install -r requirements.txt
 ```
 
-**Usage:**
-Examine the all_commands.txt file in bash and alter all file paths and desired sript arguments to suit your needs. The default is prepared for replicating the data found in Jacobs et al. 2026. Once your all_commands.txt is prepared, place a copy in the root directory of the project.
-
-```bash
-chmod +x run_commands.sh
-./run_commands.sh
-```
 ---
 
-## GUI Tools (Useful for getting started with your initial datasets)
+## GUI Tools
 
 ### MAPseq_Wizard.py
 
@@ -105,7 +101,7 @@ python setup_wizard.py
 ```
 
 **Windows Executable:**
-For Windows users who prefer not to use Python directly, download `Setup_Wizard.exe` from the [releases page](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab). This executable:
+For Windows users who prefer not to use Python directly, download `Setup_Wizard.exe` from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases). This executable:
 - Installs all necessary dependencies
 - Creates the conda environment
 - Downloads and sets up the GUI executable
@@ -118,13 +114,13 @@ For Windows users who prefer not to use Python directly, download `Setup_Wizard.
 7. Run the preprocessing script to clean and aggregate your replicate TSV files (see Preprocessing Scripts section below for details)
 
 ```
-python preprocess_and_aggregate.py -i ~/git/mapseq_processing_kimlab/predata/adults/ -o ~/git/mapseq_processing_kimlab/data/adults/
+python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacobs/predata/adults/ -o /home/mwjacobs/git/mapseq_processing_jacobs/data/adults/
 ```
 
 8. Run the main analysis script on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from the prior step)
 
 ```
-python process-nbcm-tsv.py -o ~/git/mapseq_processing_kimlab/jr0375_out/ -s JR0375 -d ~/git/mapseq_processing_kimlab/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
+python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
 ```
 
 <br/>
@@ -495,42 +491,9 @@ python postprocessing_checks.py [--repo_root REPO_ROOT] [--log_file LOG_FILE] [-
 python postprocessing_checks.py --base_output_dir 02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5
 ```
 
-### figure_generation/generate_figure_from_outputs.py
-
-Generates publication-ready figure matrices from pipeline outputs.
-
-**Purpose:**
-- Create multi-panel figures organized by age group
-- Combine outputs from multiple scripts into cohesive figure layouts
-- Support multiple parameterizations
-
-**Usage:**
-```bash
-python figure_generation/generate_figure_from_outputs.py [--parameterization PARAM] [--output_dir OUTPUT_DIR]
-```
-
-**Arguments:**
-- **--parameterization** (optional): Specific parameterization to process (default: all)
-- **--output_dir** (optional): Output directory for generated figures (default: `figure_generation/generated_figures/`)
-
-**Features:**
-- **Multi-panel layout**: Creates figures with 4 columns (one per age group: p3, p12, p20, p60)
-- **Multiple plot types**: Includes pie charts, heatmaps, significance plots, and probability heatmaps
-- **Automatic file discovery**: Finds relevant output files from processing and helper scripts
-- **High-quality output**: Generates PDF and PNG formats suitable for publication
-
-**Output:**
-- Figure matrices saved to `figure_generation/generated_figures/`
-- Organized by parameterization and plot type
-
-**Example:**
-```bash
-python figure_generation/generate_figure_from_outputs.py --parameterization 05.HAN_filter_parameters_i300_r10_t10_u5
-```
-
 ### conclusions/scripts/extract_stability_data.py
 
-Extracts stability analysis data from pipeline outputs for downstream analysis.
+Extracts stability analysis data from pipeline outputs for downstream analysis. (Project specific and not universal)
 
 **Purpose:**
 - Extract Kruskal-Wallis test results from script 01
@@ -555,39 +518,6 @@ python conclusions/scripts/extract_stability_data.py [--base_dir BASE_DIR] [--ou
 **Example:**
 ```bash
 python conclusions/scripts/extract_stability_data.py --base_dir 02_output --output_file stability_data.json
-```
-
-### conclusions/scripts/generate_conclusions.py
-
-Generates comprehensive conclusions markdown document from extracted stability data.
-
-**Purpose:**
-- Read extracted stability data JSON
-- Format statistical results with proper significance indicators
-- Generate markdown document with findings about temporal stability
-
-**Usage:**
-```bash
-python conclusions/scripts/generate_conclusions.py [--input_file INPUT_FILE] [--output_file OUTPUT_FILE]
-```
-
-**Arguments:**
-- **--input_file** (optional): Input JSON file from extract_stability_data.py (default: `extracted_stability_data.json`)
-- **--output_file** (optional): Output markdown file path (default: `conclusions.md`)
-
-**Features:**
-- **Statistical formatting**: Formats p-values with significance indicators (*, **, ***)
-- **Summary statistics**: Includes counts, percentages, and descriptive statistics
-- **Structured sections**: Organizes findings into clear sections (Kruskal-Wallis, transitions, motifs, etc.)
-- **Model comparison**: Presents results for both uniform and region-specific models
-
-**Output:**
-- Markdown document with comprehensive analysis findings
-- Suitable for inclusion in manuscripts or reports
-
-**Example:**
-```bash
-python conclusions/scripts/generate_conclusions.py --input_file stability_data.json --output_file analysis_conclusions.md
 ```
 
 ### helpers/scripts/13_aggregate_projection_summaries.py

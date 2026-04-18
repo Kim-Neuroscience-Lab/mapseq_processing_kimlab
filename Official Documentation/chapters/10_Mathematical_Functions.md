@@ -243,21 +243,21 @@ from scipy.stats import kruskal
 h_stat, p_value = kruskal(*valid_groups)
 ```
 
-### Fisher's Exact Test
+### Transition z-test (helper 07)
 
-**Mathematical Formulation**:
+**Context**: Consecutive-stage comparison of effect sizes derived from log-transformed observed counts.
 
-For 2×2 contingency table:
-$$\begin{bmatrix} a & b \\ c & d \end{bmatrix}$$
+**Standard error (delta method, expected treated as fixed)** for $d = \log_2(\text{Obs})$:
 
-$$p = \frac{\binom{a+b}{a}\binom{c+d}{c}}{\binom{n}{a+c}} = \frac{(a+b)!(c+d)!(a+c)!(b+d)!}{a!b!c!d!n!}$$
+$$SE(d) = \frac{1}{\ln(2)\,\sqrt{\text{Obs}}}$$
 
-**Code Implementation**: `helpers/scripts/07_motif_significange_trajectories.py`
+**Test statistic** for difference $\Delta = d_2 - d_1$:
 
-```python
-from scipy.stats import fisher_exact
-_, p = fisher_exact([[a, b], [c, d]])
-```
+$$z = \frac{\Delta}{\sqrt{SE_1^2 + SE_2^2}}$$
+
+Two-sided p-value from the standard normal distribution. FDR across transitions within a motif may be applied in post-processing.
+
+**Code Implementation**: `helpers/scripts/07_motif_significange_trajectories.py` (see [Chapter 5](05_Statistical_Methods.md)).
 
 ### Jensen-Shannon Divergence
 
@@ -278,10 +278,7 @@ from scipy.spatial.distance import jensenshannon
 js_div = jensenshannon(p, q)**2
 ```
 
-**Interpretation**:
-- JSD < 0.05: Very similar (stable)
-- JSD 0.05-0.2: Moderate difference
-- JSD > 0.2: Large difference (unstable)
+**Reading**: Values near 0 indicate similar distributions; larger values indicate greater divergence (scale depends on whether raw JSD or squared variant is used in a given helper).
 
 ### Welch's t-test
 

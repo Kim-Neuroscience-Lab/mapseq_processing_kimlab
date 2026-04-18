@@ -219,20 +219,15 @@ from scipy.stats import kruskal
 h_stat, p_value = kruskal(*valid_groups)
 ```
 
-### Fisher's Exact Test
+### Transition tests (Script 07)
 
 **Script**: `07_motif_significange_trajectories.py`
 
-**Purpose**: Tests significance of transitions between consecutive stages
+**Purpose**: Test whether **effect size** (log₂ observed vs expected) changes between consecutive developmental stages.
 
-**Null Hypothesis**: No change in motif representation between stages
+**Method**: Two-sample **z-test** on the difference of log-transformed observed counts, with standard errors from the delta method (see **Transition Z-Test (Script 07)** below). FDR (Benjamini–Hochberg) can be applied within each motif across transitions. The current helper **07** implementation does **not** use Fisher’s exact test.
 
 **Code Reference**: `helpers/scripts/07_motif_significange_trajectories.py`
-
-```python
-from scipy.stats import fisher_exact
-_, p = fisher_exact([[a, b], [c, d]])
-```
 
 ### Jensen-Shannon Divergence
 

@@ -59,6 +59,39 @@ These are listed in the repository `requirements.txt`.
 
 For more detail, see the [MAPseq_wizard package README](../../MAPseq_wizard/README.md) in the repository.
 
+### Wizard helper checklist vs full repository
+
+The **Helper Scripts** step in `MAPseq_wizard` exposes only a **subset** of helpers (e.g. 01–09, 13, 15 with dependency hints). It does **not** mirror every script under `helpers/scripts/` (e.g. optional **17** / **18**, per-cell projection plot **10**, model comparison **14**, or maintainer tools below). For the full list and batch order, use [Chapter 7: Helper Scripts](07_Helper_Scripts.md) and your edited `all_commands.txt`.
+
+---
+
+## Maintainer and lab batch utilities (not required for standard MAPseq)
+
+These tools are **optional**. They are kept in the repository for lab workflows; end users can ignore them unless needed.
+
+### Teleporting / batch barcode QC
+
+- **`helpers/scripts/00_teleporting_barcode_detection.py`** — Sequencing-batch vs animal mapping and related QC plots. Hardcoded mappings are project-specific; read the script before running.
+
+### Dataset comparison helpers (external data)
+
+- **`helpers/scripts/10_compare_datasets_pipeline.py`** — Two-way pipeline comparison (external datasets).
+- **`helpers/scripts/11_compare_vsv_mapseq_two_way.py`** — VSV vs MapSeq.
+- **`helpers/scripts/12_compare_datasets_pipeline_mapseq.py`** — Three-way (e.g. Allen / VSV / MapSeq).
+
+### Power and manuscript ancillary analyses
+
+- **`helpers/scripts/16_power_analysis.py`** — Power / equivalence style analyses tied to manuscript claims; depends on other helper outputs. Run with `--help` for current arguments.
+
+### Figure aggregation (multi-panel TIFF / matrices)
+
+- **`figure_generation/generate_figure_from_outputs.py`** — Builds multi-panel figures from existing pipeline outputs (e.g. by age). Not part of the core statistical pipeline; run only if you maintain that figure workflow.
+- Other scripts under `figure_generation/` may exist for one-off exports; use `--help` per script.
+
+### Conclusions generation (lab reports)
+
+Scripts under **`conclusions/scripts/`** (e.g. `extract_stability_data.py`, `generate_conclusions.py`) read processed outputs and write markdown/HTML conclusions for this repository’s stability narrative. Paths and arguments change with the repo; inspect the scripts and [`bash/all_commands.txt`](../../bash/all_commands.txt) for the current invocation. These are **not** general MAPseq user requirements.
+
 ---
 
 ## Recommendation

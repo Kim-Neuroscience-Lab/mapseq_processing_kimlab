@@ -66,19 +66,19 @@
 <p>$$\pi \cdot N_0 = N_{obs}$$</p>
 <p>This is a polynomial equation in N₀ (degree = number of regions + 1). We use symbolic algebra (SymPy) to find roots and select the <strong>largest real root &gt; N_obs</strong>.</p>
 <p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">solve_for_roots</span><span class="p">(</span><span class="n">projections</span><span class="p">,</span> <span class="n">observed_cells</span><span class="p">):</span>
-    <span class="n">N0</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s1">&#39;N_0 k&#39;</span><span class="p">)</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">projections</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">Array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">projections</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-    <span class="n">pi</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">Product</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">/</span><span class="n">N0</span><span class="p">)),</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span><span class="o">.</span><span class="n">doit</span><span class="p">())</span>
-    <span class="n">soln</span> <span class="o">=</span> <span class="n">sympy</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">pi</span> <span class="o">*</span> <span class="n">N0</span> <span class="o">-</span> <span class="n">observed_cells</span><span class="p">)</span>
-    <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span><span class="n">N</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">as_real_imag</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">soln</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">roots</span><span class="p">,</span> <span class="n">pi</span>
+<pre class="codehilite"><code class="language-python">def solve_for_roots(projections, observed_cells):
+    N0, k = symbols('N_0 k')
+    m = len(projections) - 1
+    s = Array(list(projections.values()))
+    pi = (1 - Product((1 - (s[k]/N0)), (k, 0, m)).doit())
+    soln = sympy.solve(pi * N0 - observed_cells)
+    roots = [N(x).as_real_imag()[0] for x in soln]
+    return roots, pi
 
-<span class="c1"># Root selection (in main script after solve_for_roots)</span>
-<span class="n">valid_N0</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span> <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">is_real</span> <span class="ow">and</span> <span class="n">root</span> <span class="o">&gt;</span> <span class="n">observed_cells</span><span class="p">]</span>
-<span class="n">N0_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">valid_N0</span><span class="p">)</span>  <span class="c1"># Largest valid root</span>
-</code></pre></div>
+# Root selection (in main script after solve_for_roots)
+valid_N0 = [root for root in roots if root.is_real and root &gt; observed_cells]
+N0_value = max(valid_N0)  # Largest valid root
+</code></pre>
 
 <h3 id="key-assumption">Key Assumption</h3>
 <p><strong>Independence:</strong> Projections to different regions are statistically independent. This may not hold biologically if certain projection patterns co-occur—which is why we developed Model 3 (Correlated Binomial). See <a href="06_Probability_Models.html">Chapter 6: Probability Models</a> for details.</p>
@@ -92,10 +92,10 @@
 <p><strong>Alternative Hypothesis</strong>: Observed count differs significantly from expected.</p>
 <h3 id="test-implementation">Test Implementation</h3>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (binomial testing)</p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">binomtest</span>
+<pre class="codehilite"><code class="language-python">from scipy.stats import binomtest
 
-<span class="n">p_value</span> <span class="o">=</span> <span class="n">binomtest</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">observed</span><span class="p">),</span> <span class="n">n</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">N0_value</span><span class="p">),</span> <span class="n">p</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="mf">1e-10</span><span class="p">))</span><span class="o">.</span><span class="n">pvalue</span>
-</code></pre></div>
+p_value = binomtest(int(observed), n=int(N0_value), p=max(prob, 1e-10)).pvalue
+</code></pre>
 
 <p><strong>Note</strong>: The test uses N₀ (estimated population), not N_obs (observed cells). This accounts for neurons that may project only to unsampled regions.</p>
 <h3 id="two-tailed-test">Two-Tailed Test</h3>
@@ -114,8 +114,8 @@
 <p><strong>Example</strong>: With 32 motifs and α = 0.05:<br />
 $$\alpha_{corrected} = \frac{0.05}{32} \approx 0.00156$$</p>
 <p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (significance grouping)</p>
-<div class="codehilite"><pre><span></span><code><span class="n">bonferroni_thr</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">motif_labels</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">bonferroni_thr = alpha / len(motif_labels)
+</code></pre>
 
 <h3 id="significance-criteria">Significance Criteria</h3>
 <p>A motif is considered <strong>significant</strong> if:<br />
@@ -125,8 +125,8 @@ $$p\text{-value} &lt; \alpha_{corrected}$$</p>
 <p>Effect size quantifies the magnitude of deviation from model expectations:</p>
 <p>$$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py</code> (effect size calculation)</p>
-<div class="codehilite"><pre><span></span><code><span class="n">effect_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">((</span><span class="n">observed</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">expected</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">effect_size = np.log2((observed + 1) / (expected + 1))
+</code></pre>
 
 <h3 id="interpretation">Interpretation</h3>
 <table>
@@ -202,17 +202,17 @@ $$p\text{-value} &lt; \alpha_{corrected}$$</p>
 </tbody>
 </table>
 <p><strong>Code Implementation</strong>: <code>process-nbcm-tsv.py</code> (significance grouping)</p>
-<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">effect_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># over-represented</span>
-    <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">bonferroni_thr</span><span class="p">:</span>  <span class="c1"># statistically significant</span>
-        <span class="n">grp</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># significant + over-represented</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">grp</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># non-significant + over-represented</span>
-<span class="k">else</span><span class="p">:</span>  <span class="c1"># under-represented</span>
-    <span class="k">if</span> <span class="n">p_value</span> <span class="o">&lt;</span> <span class="n">bonferroni_thr</span><span class="p">:</span>  <span class="c1"># statistically significant</span>
-        <span class="n">grp</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># significant + under-represented</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">grp</span> <span class="o">=</span> <span class="mi">4</span>  <span class="c1"># non-significant + under-represented</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">if effect_size &gt; 0:  # over-represented
+    if p_value &lt; bonferroni_thr:  # statistically significant
+        grp = 1  # significant + over-represented
+    else:
+        grp = 3  # non-significant + over-represented
+else:  # under-represented
+    if p_value &lt; bonferroni_thr:  # statistically significant
+        grp = 2  # significant + under-represented
+    else:
+        grp = 4  # non-significant + under-represented
+</code></pre>
 
 <h2 id="anchor-model-system">Anchor Model System</h2>
 <h3 id="purpose">Purpose</h3>
@@ -245,19 +245,15 @@ $$p\text{-value} &lt; \alpha_{corrected}$$</p>
 <p><strong>Purpose</strong>: Non-parametric test comparing motif frequencies across age groups</p>
 <p><strong>Null Hypothesis</strong>: No difference in motif frequency distributions across ages</p>
 <p><strong>Code Reference</strong>: <code>helpers/scripts/01_motif_analysis_per_animal.py</code></p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">kruskal</span>
-<span class="n">h_stat</span><span class="p">,</span> <span class="n">p_value</span> <span class="o">=</span> <span class="n">kruskal</span><span class="p">(</span><span class="o">*</span><span class="n">valid_groups</span><span class="p">)</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">from scipy.stats import kruskal
+h_stat, p_value = kruskal(*valid_groups)
+</code></pre>
 
-<h3 id="fishers-exact-test">Fisher's Exact Test</h3>
+<h3 id="transition-tests-script-07">Transition tests (Script 07)</h3>
 <p><strong>Script</strong>: <code>07_motif_significange_trajectories.py</code></p>
-<p><strong>Purpose</strong>: Tests significance of transitions between consecutive stages</p>
-<p><strong>Null Hypothesis</strong>: No change in motif representation between stages</p>
+<p><strong>Purpose</strong>: Test whether <strong>effect size</strong> (log₂ observed vs expected) changes between consecutive developmental stages.</p>
+<p><strong>Method</strong>: Two-sample <strong>z-test</strong> on the difference of log-transformed observed counts, with standard errors from the delta method (see <strong>Transition Z-Test (Script 07)</strong> below). FDR (Benjamini–Hochberg) can be applied within each motif across transitions. The current helper <strong>07</strong> implementation does <strong>not</strong> use Fisher’s exact test.</p>
 <p><strong>Code Reference</strong>: <code>helpers/scripts/07_motif_significange_trajectories.py</code></p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">fisher_exact</span>
-<span class="n">_</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">fisher_exact</span><span class="p">([[</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">],</span> <span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">]])</span>
-</code></pre></div>
-
 <h3 id="jensen-shannon-divergence">Jensen-Shannon Divergence</h3>
 <p><strong>Scripts</strong>: <code>01_motif_analysis_per_animal.py</code>, <code>05_motif_analysis.py</code></p>
 <p><strong>Purpose</strong>: Measures distribution similarity between ages</p>
@@ -267,6 +263,154 @@ $$p\text{-value} &lt; \alpha_{corrected}$$</p>
 - JSD 0.05-0.2: Moderate difference<br />
 - JSD &gt; 0.2: Large difference (unstable)</p>
 <p><strong>Code Reference</strong>: Uses <code>scipy.spatial.distance.jensenshannon</code></p>
+<h2 id="trajectory-significance-testing-script-15">Trajectory Significance Testing (Script 15)</h2>
+<p>Script 15 (<code>15_volcano_trajectories.py</code>) implements multiple citable statistical methods for identifying motif trajectories that change significantly across developmental stages. These methods address the fundamental question: "Does this motif's effect size/significance change meaningfully over time?"</p>
+<h3 id="transition-z-test-script-07">Transition Z-Test (Script 07)</h3>
+<p><strong>Script</strong>: <code>07_motif_significange_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Tests whether effect size changed significantly between consecutive developmental stages.</p>
+<p><strong>Method</strong>: Two-sample z-test for the difference of log-transformed counts.</p>
+<p><strong>Standard Error Derivation</strong>:<br />
+For effect size $d = \log_2(\text{observed}/\text{expected})$, treating expected as fixed:</p>
+<p>$$SE(d) = \frac{1}{\ln(2) \cdot \sqrt{\text{observed}}}$$</p>
+<p>This follows from the delta method applied to Poisson-distributed counts.</p>
+<p><strong>Test Statistic</strong>:<br />
+$$z = \frac{d_2 - d_1}{\sqrt{SE_1^2 + SE_2^2}}$$</p>
+<p><strong>P-value</strong>: Two-sided p-value from standard normal distribution.</p>
+<p><strong>Reference</strong>: Oehlert, G.W. (1992). "A Note on the Delta Method." <em>The American Statistician</em>, 46(1), 27-29.</p>
+<p><strong>Note</strong>: FDR correction (Benjamini-Hochberg) is applied within each motif across the 3 transitions.</p>
+<h3 id="permutation-tests-for-trajectory-significance">Permutation Tests for Trajectory Significance</h3>
+<p><strong>Script</strong>: <code>15_volcano_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Non-parametric test for whether a trajectory shows more temporal variation than expected by chance.</p>
+<p><strong>Method</strong>:<br />
+1. Compute observed test statistic: total variation in effect size across ordered stages<br />
+2. Generate null distribution by randomly permuting stage labels (10,000 permutations)<br />
+3. P-value = proportion of permuted statistics ≥ observed statistic</p>
+<p><strong>Test Statistic</strong>:<br />
+$$TV = \sum_{i=1}^{n-1} |d_{i+1} - d_i|$$</p>
+<p>where $d_i$ is the effect size at stage $i$ in temporal order.</p>
+<p><strong>Advantages</strong>:<br />
+- Distribution-free (no normality assumptions)<br />
+- Exact p-values<br />
+- Robust to outliers</p>
+<p><strong>Reference</strong>: Good, P. (2005). <em>Permutation, Parametric and Bootstrap Tests of Hypotheses</em>, 3rd ed., Springer.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/15_volcano_trajectories.py::compute_permutation_significance()</code></p>
+<h3 id="functional-data-analysis-fda-trajectory-tests">Functional Data Analysis (FDA) Trajectory Tests</h3>
+<p><strong>Script</strong>: <code>15_volcano_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Tests whether a trajectory differs significantly from a flat (constant) function.</p>
+<p><strong>Method</strong>:<br />
+1. Treat each motif's effect size trajectory as a functional observation<br />
+2. Compute a "roughness" statistic combining range and integrated squared second derivative<br />
+3. Compare to null distribution via permutation (shuffled stage labels)</p>
+<p><strong>Roughness Statistic</strong>:<br />
+$$R = \text{range}(d) + \sum_{i=1}^{n-2} (\Delta^2 d_i)^2$$</p>
+<p>where $\Delta^2 d_i = d_{i+2} - 2d_{i+1} + d_i$ is the discrete second difference.</p>
+<p><strong>Interpretation</strong>: Higher roughness indicates more non-constant trajectory behavior.</p>
+<p><strong>Reference</strong>: Ramsay, J.O. &amp; Silverman, B.W. (2005). <em>Functional Data Analysis</em>, 2nd ed., Springer.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/15_volcano_trajectories.py::compute_fda_significance()</code></p>
+<h3 id="mixed-effects-models-for-repeated-measures">Mixed-Effects Models for Repeated Measures</h3>
+<p><strong>Script</strong>: <code>15_volcano_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Model effect size as a function of developmental stage while accounting for motif-level variation.</p>
+<p><strong>Model</strong>:<br />
+$$\text{effect_size}<em>{ij} = \beta_0 + \beta_1 \cdot \text{stage}_j + u_i + \varepsilon</em>{ij}$$</p>
+<p>Where:<br />
+- $\beta_1$ = fixed effect of stage (tests: does stage affect effect size overall?)<br />
+- $u_i \sim N(0, \sigma_u^2)$ = random intercept for motif $i$<br />
+- $\varepsilon_{ij} \sim N(0, \sigma^2)$ = residual error</p>
+<p><strong>Output</strong>:<br />
+- Stage coefficient ($\beta_1$) and its p-value<br />
+- Per-motif random intercepts (identify outlier motifs)<br />
+- Model convergence status</p>
+<p><strong>Reference</strong>: Bates, D., Mächler, M., Bolker, B., &amp; Walker, S. (2015). "Fitting Linear Mixed-Effects Models Using lme4." <em>Journal of Statistical Software</em>, 67(1), 1-48.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/15_volcano_trajectories.py::compute_mixed_effects_trajectory_test()</code></p>
+<h3 id="bootstrap-confidence-intervals-for-quadrant-classification">Bootstrap Confidence Intervals for Quadrant Classification</h3>
+<p><strong>Script</strong>: <code>15_volcano_trajectories.py</code></p>
+<p><strong>Purpose</strong>: Quantify uncertainty in volcano plot quadrant assignments.</p>
+<p><strong>Problem</strong>: Points near the significance threshold may flip quadrants due to sampling noise.</p>
+<p><strong>Method</strong>:<br />
+1. For each (effect_size, observed_count) pair, resample observed count from Poisson(observed)<br />
+2. Recompute effect size for each bootstrap sample<br />
+3. Classify quadrant for each sample<br />
+4. Report proportion of samples in each quadrant<br />
+5. "Robust" classification if &gt;95% of samples agree</p>
+<p><strong>Output</strong>:<br />
+- <code>quadrant_raw</code>: Original classification<br />
+- <code>prop_sig_pos</code>, <code>prop_sig_neg</code>, <code>prop_not_sig</code>: Bootstrap proportions<br />
+- <code>quadrant_robust</code>: Robust classification ("uncertain" if &lt;95% agreement)</p>
+<p><strong>Reference</strong>: Efron, B. &amp; Tibshirani, R.J. (1993). <em>An Introduction to the Bootstrap</em>, Chapman &amp; Hall.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/15_volcano_trajectories.py::compute_bootstrap_quadrant_ci()</code></p>
+<h3 id="standardized-distance-metrics">Standardized Distance Metrics</h3>
+<p>The original path length calculation in (effect_size, significance) space combined incommensurate scales. Three alternatives are now provided:</p>
+<h4 id="z-score-standardized-path-length">Z-Score Standardized Path Length</h4>
+<p><strong>Method</strong>: Standardize both axes to z-scores before computing Euclidean distance.</p>
+<p>$$z_{\text{effect}} = \frac{d - \bar{d}}{\sigma_d}, \quad z_{\text{sig}} = \frac{s - \bar{s}}{\sigma_s}$$</p>
+<p>$$PL_z = \sum_{i=1}^{n-1} \sqrt{(z_{\text{effect},i+1} - z_{\text{effect},i})^2 + (z_{\text{sig},i+1} - z_{\text{sig},i})^2}$$</p>
+<p><strong>Advantage</strong>: Puts both axes on comparable scales.</p>
+<h4 id="mahalanobis-distance-path-length">Mahalanobis Distance Path Length</h4>
+<p><strong>Method</strong>: Use Mahalanobis distance, which accounts for correlation and variance structure.</p>
+<p>$$PL_M = \sum_{i=1}^{n-1} \sqrt{(\mathbf{x}<em>{i+1} - \mathbf{x}_i)^T \Sigma^{-1} (\mathbf{x}</em>{i+1} - \mathbf{x}_i)}$$</p>
+<p>where $\Sigma$ is the covariance matrix of (effect_size, significance).</p>
+<p><strong>Advantage</strong>: Accounts for correlation between effect size and significance.</p>
+<p><strong>Reference</strong>: Mahalanobis, P.C. (1936). "On the generalised distance in statistics." <em>Proceedings of the National Institute of Sciences of India</em>, 2, 49-55.</p>
+<h4 id="separate-axis-metrics">Separate Axis Metrics</h4>
+<p><strong>Method</strong>: Analyze effect_size and significance independently.</p>
+<p><strong>Output</strong>:<br />
+- <code>effect_size_range</code>: max - min of effect sizes<br />
+- <code>effect_size_sd</code>: Standard deviation of effect sizes<br />
+- <code>effect_size_total_variation</code>: Sum of absolute differences<br />
+- Same metrics for significance axis</p>
+<p><strong>Advantage</strong>: Avoids scale mixing entirely; more interpretable.</p>
+<p><strong>Code Reference</strong>: <code>helpers/scripts/15_volcano_trajectories.py::compute_separate_axis_metrics()</code></p>
+<h3 id="method-comparison-and-recommendations">Method Comparison and Recommendations</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Best For</th>
+<th>Citation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Permutation test</td>
+<td>Primary analysis; no distributional assumptions</td>
+<td>Good (2005)</td>
+</tr>
+<tr>
+<td>FDA</td>
+<td>Detecting non-constant trajectories</td>
+<td>Ramsay &amp; Silverman (2005)</td>
+</tr>
+<tr>
+<td>Mixed-effects</td>
+<td>Pooling across experiments; random effects</td>
+<td>Bates et al. (2015)</td>
+</tr>
+<tr>
+<td>Bootstrap CI</td>
+<td>Quantifying quadrant uncertainty</td>
+<td>Efron &amp; Tibshirani (1993)</td>
+</tr>
+<tr>
+<td>Z-score path</td>
+<td>Standardized distance metric</td>
+<td>Standard</td>
+</tr>
+<tr>
+<td>Mahalanobis</td>
+<td>Covariance-aware distance</td>
+<td>Mahalanobis (1936)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommendation for Publication</strong>:<br />
+1. Use permutation tests or FDA as primary trajectory significance test<br />
+2. Report method agreement matrix to show robustness<br />
+3. Use bootstrap CI to identify uncertain quadrant classifications<br />
+4. Prefer separate axis metrics over raw path length for interpretability</p>
+<h3 id="methods-removed-or-deprecated">Methods Removed or Deprecated</h3>
+<p><strong>Kruskal-Wallis Test (Script 07)</strong>: Removed. The original implementation applied Kruskal-Wallis with n=1 observation per group (each stage had one effect size per motif), which is statistically invalid. Kruskal-Wallis requires multiple observations per group to estimate within-group variance.</p>
+<p><strong>Linear Regression Trend P-value (Script 07)</strong>: Retained but flagged as <strong>exploratory only</strong>. With only n=4 observations per trajectory, the p-value from <code>linregress</code> has extremely low statistical power and should not be used for formal hypothesis testing. The slope itself remains useful as a descriptive statistic.</p>
+<p><strong>Centroid Rule (Script 15)</strong>: Retained for backward compatibility but flagged as <strong>ad-hoc</strong>. This method has no published precedent and unknown false positive/negative rates. Use permutation tests or FDA for publication-quality analysis.</p>
 <h2 id="summary">Summary</h2>
 <table>
 <thead>

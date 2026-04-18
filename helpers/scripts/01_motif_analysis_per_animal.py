@@ -578,25 +578,29 @@ def add_bracket_annotation(fig, ax, x_start, x_end, text):
     )
 
 
-def calculate_distribution_jsd(freq_arrays):
-    """Calculate JSD between frequency distributions (handles 1-3 timepoints)"""
-    # Add small epsilon to avoid log(0) and normalize
+def _normalized_freq_arrays(freq_arrays):
+    """Epsilon + L1-normalize each frequency vector (shared by JSD helpers)."""
     epsilon = 1e-10
-    
-    n_timepoints = len(freq_arrays)
-    
-    if n_timepoints < 2:
-        # Not enough timepoints for comparison
-        return np.nan, np.nan, np.nan
-    
-    # Normalize each frequency array
     normalized_freqs = []
     for freq_array in freq_arrays:
-        freq = np.array(freq_array) + epsilon
+        freq = np.array(freq_array, dtype=float) + epsilon
         freq = freq / freq.sum()
         normalized_freqs.append(freq)
-    
-    # Calculate pairwise JSDs based on available timepoints
+    return normalized_freqs
+
+
+def calculate_distribution_jsd(freq_arrays):
+    """
+    Legacy triple of JSDs for positions (0,1), (0,2), (1,2) — used for figure brackets
+    when there are exactly three timepoints; with two timepoints only (0,1) is filled.
+    """
+    n_timepoints = len(freq_arrays)
+
+    if n_timepoints < 2:
+        return np.nan, np.nan, np.nan
+
+    normalized_freqs = _normalized_freq_arrays(freq_arrays)
+
     if n_timepoints == 2:
         jsd_12 = jensenshannon(normalized_freqs[0], normalized_freqs[1])
         return jsd_12, np.nan, np.nan
@@ -605,8 +609,62 @@ def calculate_distribution_jsd(freq_arrays):
         jsd_13 = jensenshannon(normalized_freqs[0], normalized_freqs[2])
         jsd_23 = jensenshannon(normalized_freqs[1], normalized_freqs[2])
         return jsd_12, jsd_13, jsd_23
-    
+
     return np.nan, np.nan, np.nan
+
+
+def pairwise_jsd_dataframe(freq_arrays, labels, normalization, domain="all"):
+    """
+    Jensen–Shannon distance between all unordered pairs of distributions.
+
+    freq_arrays: list of vectors (same length), aligned with labels.
+    domain: 'all' for global; else motif domain index (int) for domain-wise rows.
+    """
+    cols = ["timepoint_a", "timepoint_b", "jsd", "normalization", "domain"]
+    if len(freq_arrays) < 2 or len(labels) != len(freq_arrays):
+        return pd.DataFrame(columns=cols)
+
+    normalized_freqs = _normalized_freq_arrays(freq_arrays)
+    rows = []
+    for i, j in combinations(range(len(labels)), 2):
+        rows.append(
+            {
+                "timepoint_a": str(labels[i]),
+                "timepoint_b": str(labels[j]),
+                "jsd": float(jensenshannon(normalized_freqs[i], normalized_freqs[j])),
+                "normalization": normalization,
+                "domain": domain,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def jsd_bracket_annotation_lines(jsd_12, jsd_13, jsd_23, labels):
+    """Build bracket text lines using actual timepoint names for legacy (0,1),(0,2),(1,2) triple."""
+    parts = []
+    n = len(labels)
+    if n >= 2 and not np.isnan(jsd_12):
+        parts.append(f"{labels[0]}-{labels[1]}: {jsd_12:.3f}")
+    if n >= 3 and not np.isnan(jsd_13):
+        parts.append(f"{labels[0]}-{labels[2]}: {jsd_13:.3f}")
+    if n >= 3 and not np.isnan(jsd_23):
+        parts.append(f"{labels[1]}-{labels[2]}: {jsd_23:.3f}")
+    return parts
+
+
+CANONICAL_MIRROR_SUBDIRS = ("cross_age", "p3", "p12", "p20", "p60")
+
+
+def write_mirrored_model_outputs(model_results_dir, jsd_df, run_metrics_df, summary_text):
+    """Write the same analysis artifacts under each canonical model subdirectory."""
+    for sub in CANONICAL_MIRROR_SUBDIRS:
+        out_dir = os.path.join(model_results_dir, sub)
+        os.makedirs(out_dir, exist_ok=True)
+        jsd_df.to_csv(os.path.join(out_dir, "distribution_jsd_pairwise.csv"), index=False)
+        run_metrics_df.to_csv(os.path.join(out_dir, "run_metrics.csv"), index=False)
+        summary_path = os.path.join(out_dir, "analysis_run_summary.txt")
+        with open(summary_path, "w", encoding="utf-8") as f:
+            f.write(summary_text)
 
 
 def calculate_summary_stats(datasets, all_motifs, normalization_type="global"):
@@ -987,10 +1045,9 @@ for model_type in models_to_process:
     model_results_dir = os.path.join(RESULTS_DIR, model_type)
     os.makedirs(model_results_dir, exist_ok=True)
     
-    # Create cross_age subdirectory if needed
+    # Cross-age figures and Kruskal CSVs always use this directory (even if output_mode is per_age-only).
     cross_age_dir = os.path.join(model_results_dir, "cross_age")
-    if output_mode in ['cross_age', 'both']:
-        os.makedirs(cross_age_dir, exist_ok=True)
+    os.makedirs(cross_age_dir, exist_ok=True)
     
     # Store original RESULTS_DIR to restore later
     original_results_dir = RESULTS_DIR
@@ -1025,14 +1082,20 @@ for model_type in models_to_process:
 
     print(f"\nTotal unique motifs across all timepoints ({model_type} model): {len(all_motifs)}")
 
-    # Existing cross-age plot generation (preserved)
-    if output_mode in ['cross_age', 'both']:
-        # Calculate summary statistics for global normalization
-        print("\nCalculating summary statistics...")
-        global_summary_stats = calculate_summary_stats(datasets, all_motifs, "global")
+    model_summary_lines = []
+
+    def sp(*args):
+        """Print to console and capture a single line for analysis_run_summary.txt."""
+        line = " ".join(str(a) for a in args) if args else ""
+        print(*args)
+        model_summary_lines.append(line)
+
+    # Summary statistics required for global figure and JSD (all output modes).
+    sp("\nCalculating summary statistics...")
+    global_summary_stats = calculate_summary_stats(datasets, all_motifs, "global")
 
     # Perform Kruskal-Wallis tests for global normalization
-    print("Performing Kruskal-Wallis tests for global normalization...")
+    sp("Performing Kruskal-Wallis tests for global normalization...")
     global_kw_results = perform_kruskal_wallis_tests(datasets, all_motifs, "global")
 
     # =============================================================================
@@ -1085,15 +1148,9 @@ for model_type in models_to_process:
         bracket_start = -width / 2  # Start from left edge of first group
         bracket_end = n_motifs - 1 + 2.5 * width  # End at right edge of last group
 
-        # Build JSD text based on available comparisons
-        jsd_parts = []
-        if not np.isnan(jsd_12):
-            jsd_parts.append(f"P12-P20: {jsd_12:.3f}")
-        if not np.isnan(jsd_13):
-            jsd_parts.append(f"P12-P60: {jsd_13:.3f}")
-        if not np.isnan(jsd_23):
-            jsd_parts.append(f"P20-P60: {jsd_23:.3f}")
-        
+        jsd_parts = jsd_bracket_annotation_lines(
+            jsd_12, jsd_13, jsd_23, datasets_list
+        )
         if jsd_parts:
             jsd_text = "\n".join(jsd_parts)
             add_bracket_annotation(fig1, ax1, bracket_start, bracket_end, jsd_text)
@@ -1114,7 +1171,7 @@ for model_type in models_to_process:
 
     # Print summary of significant results
     n_significant_global = global_kw_results["significant"].sum()
-    print(
+    sp(
         f"Global normalization: {n_significant_global}/{len(global_kw_results)} motifs show significant differences (p < 0.05)"
     )
 
@@ -1353,15 +1410,9 @@ for model_type in models_to_process:
             bracket_start = first_motif_x - width / 2  # Left edge of first bar group
             bracket_end = last_motif_x + width + width  # Right edge of last bar group
 
-            # Build JSD text based on available comparisons
-            jsd_parts = []
-            if not np.isnan(jsd_12):
-                jsd_parts.append(f"P12-P20: {jsd_12:.3f}")
-            if not np.isnan(jsd_13):
-                jsd_parts.append(f"P12-P60: {jsd_13:.3f}")
-            if not np.isnan(jsd_23):
-                jsd_parts.append(f"P20-P60: {jsd_23:.3f}")
-            
+            jsd_parts = jsd_bracket_annotation_lines(
+                jsd_12, jsd_13, jsd_23, datasets_list
+            )
             if jsd_parts:
                 jsd_text = "\n".join(jsd_parts)
                 add_bracket_annotation(fig2, ax2, bracket_start, bracket_end, jsd_text)
@@ -1382,12 +1433,12 @@ for model_type in models_to_process:
 
     # Print summary of significant results
     n_significant_domain = domain_kw_results["significant"].sum()
-    print(
+    sp(
         f"Domain normalization: {n_significant_domain}/{len(domain_kw_results)} motifs show significant differences (p < 0.05)"
     )
 
     # Create a summary of all statistical results
-    print("\nCreating statistical summary...")
+    sp("\nCreating statistical summary...")
     combined_results = []
 
     # Add global results
@@ -1419,67 +1470,67 @@ for model_type in models_to_process:
     combined_df = pd.DataFrame(combined_results)
     summary_path = os.path.join(cross_age_dir, "kruskal_wallis_summary.csv")
     combined_df.to_csv(summary_path, index=False)
-    print(f"Saved combined statistical summary: {summary_path}")
+    sp(f"Saved combined statistical summary: {summary_path}")
+
+    jsd_frames = [pairwise_jsd_dataframe(global_freqs, datasets_list, "global", "all")]
+    for start, end, domain in domain_boundaries:
+        domain_motifs = motif_domains[domain]
+        domain_freqs = []
+        for dataset in datasets_list:
+            dataset_domain_freqs = [
+                domain_summary_stats[dataset][motif]["mean"] for motif in domain_motifs
+            ]
+            domain_freqs.append(dataset_domain_freqs)
+        jsd_frames.append(
+            pairwise_jsd_dataframe(domain_freqs, datasets_list, "domain", domain)
+        )
+    jsd_export_df = pd.concat(jsd_frames, ignore_index=True)
+    jsd_export_df.insert(0, "model", model_type)
 
     # =============================================================================
     # STATISTICAL SUMMARY
     # =============================================================================
 
-    print("\n" + "=" * 100)
-    print("COMPREHENSIVE STATISTICAL ANALYSIS")
-    print("=" * 100)
+    sp("")
+    sp("=" * 100)
+    sp("COMPREHENSIVE STATISTICAL ANALYSIS")
+    sp("=" * 100)
 
-    print("\n1. GLOBAL NORMALIZATION - Overall Distribution Comparison:")
-    print("-" * 80)
-    global_jsd_12, global_jsd_13, global_jsd_23 = calculate_distribution_jsd(global_freqs)
-    if not np.isnan(global_jsd_12):
-        print(f"P12 vs P20: JSD = {global_jsd_12:.4f}")
-    if not np.isnan(global_jsd_13):
-        print(f"P12 vs P60: JSD = {global_jsd_13:.4f}")
-    if not np.isnan(global_jsd_23):
-        print(f"P20 vs P60: JSD = {global_jsd_23:.4f}")
-    if np.isnan(global_jsd_12) and np.isnan(global_jsd_13) and np.isnan(global_jsd_23):
-        print("Note: Not enough timepoints for JSD comparison (need at least 2)")
+    sp("\n1. GLOBAL NORMALIZATION - Overall Distribution Comparison:")
+    sp("-" * 80)
+    global_pair_df = jsd_export_df[jsd_export_df["normalization"] == "global"]
+    if len(global_pair_df) == 0:
+        sp("Note: Not enough timepoints for JSD comparison (need at least 2)")
+    else:
+        for _, row in global_pair_df.iterrows():
+            sp(f"{row['timepoint_a']} vs {row['timepoint_b']}: JSD = {row['jsd']:.4f}")
 
-    print("\n2. DOMAIN-WISE NORMALIZATION - Domain-specific Comparisons Only:")
-    print("-" * 80)
-    print("(No global comparison - only within-domain comparisons are meaningful)")
+    sp("\n2. DOMAIN-WISE NORMALIZATION - Domain-specific Comparisons Only:")
+    sp("-" * 80)
+    sp("(No global comparison - only within-domain comparisons are meaningful)")
     for start, end, domain in domain_boundaries:
-        domain_freqs = []
         domain_motifs = motif_domains[domain]
+        sp(f"Domain {domain} ({len(domain_motifs)} motifs):")
+        sub = jsd_export_df[
+            (jsd_export_df["normalization"] == "domain")
+            & (jsd_export_df["domain"] == domain)
+        ]
+        for _, row in sub.iterrows():
+            sp(f"  {row['timepoint_a']} vs {row['timepoint_b']}: JSD = {row['jsd']:.4f}")
 
-        for dataset in datasets_list:
-            dataset_domain_freqs = []
-            for motif in domain_motifs:
-                mean_freq = domain_summary_stats[dataset][motif]["mean"]
-                dataset_domain_freqs.append(mean_freq)
-            domain_freqs.append(dataset_domain_freqs)
-
-        domain_jsd_12, domain_jsd_13, domain_jsd_23 = calculate_distribution_jsd(
-            domain_freqs
-        )
-
-        print(f"Domain {domain} ({len(domain_motifs)} motifs):")
-        if not np.isnan(domain_jsd_12):
-            print(f"  P12 vs P20: JSD = {domain_jsd_12:.4f}")
-        if not np.isnan(domain_jsd_13):
-            print(f"  P12 vs P60: JSD = {domain_jsd_13:.4f}")
-        if not np.isnan(domain_jsd_23):
-            print(f"  P20 vs P60: JSD = {domain_jsd_23:.4f}")
-
-    print("\n3. DOMAIN COMPOSITION:")
-    print("-" * 80)
+    sp("\n3. DOMAIN COMPOSITION:")
+    sp("-" * 80)
     for domain in sorted_domains:
         motifs_in_domain = motif_domains[domain]
-        print(f"Domain {domain}: {len(motifs_in_domain)} motifs")
+        sp(f"Domain {domain}: {len(motifs_in_domain)} motifs")
         for motif in motifs_in_domain:
-            print(f"  {motif}")
+            sp(f"  {motif}")
 
-    print("\n4. SAMPLE SIZES:")
-    print("-" * 80)
+    sp("\n4. SAMPLE SIZES:")
+    sp("-" * 80)
     for timepoint in datasets_list:
         n_animals = len(set(datasets[timepoint]["Animal_ID"]))
-        print(f"{timepoint}: {n_animals} animals")
+        sp(f"{timepoint}: {n_animals} animals")
 
         # Show sample sizes for each domain
         for domain in sorted_domains:
@@ -1491,18 +1542,18 @@ for model_type in models_to_process:
                     "Animal_ID"
                 ].unique()
                 animals_with_domain_data.update(motif_animals)
-            print(f"  Domain {domain}: {len(animals_with_domain_data)} animals with data")
+            sp(f"  Domain {domain}: {len(animals_with_domain_data)} animals with data")
 
-    print("\n5. KRUSKAL-WALLIS TEST RESULTS:")
-    print("-" * 80)
-    print(
+    sp("\n5. KRUSKAL-WALLIS TEST RESULTS:")
+    sp("-" * 80)
+    sp(
         f"Global normalization: {n_significant_global}/{len(global_kw_results)} motifs show significant differences"
     )
-    print(
+    sp(
         f"Domain normalization: {n_significant_domain}/{len(domain_kw_results)} motifs show significant differences"
     )
 
-    print("\nMost significant motifs (Global normalization, p < 0.01):")
+    sp("\nMost significant motifs (Global normalization, p < 0.01):")
     if len(global_kw_results) > 0:
         significant_global = global_kw_results[global_kw_results["p_value"] < 0.01].copy()
         if len(significant_global) > 0:
@@ -1510,15 +1561,15 @@ for model_type in models_to_process:
             sort_idx = significant_global["p_value"].argsort()
             significant_global_sorted = significant_global.iloc[sort_idx]
             for _, row in significant_global_sorted.head(10).iterrows():
-                print(
+                sp(
                     f"  {row['Motif']}: H = {row['H_statistic']:.3f}, p = {row['p_value']:.6f}"
                 )
         else:
-            print("  No motifs with p < 0.01")
+            sp("  No motifs with p < 0.01")
     else:
-        print("  No results available")
+        sp("  No results available")
 
-    print("\nMost significant motifs (Domain normalization, p < 0.01):")
+    sp("\nMost significant motifs (Domain normalization, p < 0.01):")
     if len(domain_kw_results) > 0:
         significant_domain = domain_kw_results[domain_kw_results["p_value"] < 0.01].copy()
         if len(significant_domain) > 0:
@@ -1526,48 +1577,83 @@ for model_type in models_to_process:
             sort_idx = significant_domain["p_value"].argsort()
             significant_domain_sorted = significant_domain.iloc[sort_idx]
             for _, row in significant_domain_sorted.head(10).iterrows():
-                print(
+                sp(
                     f"  {row['Motif']}: H = {row['H_statistic']:.3f}, p = {row['p_value']:.6f}"
                 )
         else:
-            print("  No motifs with p < 0.01")
+            sp("  No motifs with p < 0.01")
     else:
-        print("  No results available")
+        sp("  No results available")
 
-    print("\n" + "=" * 100)
-    print("INTERPRETATION")
-    print("=" * 100)
-    print(
+    sp("")
+    sp("=" * 100)
+    sp("INTERPRETATION")
+    sp("=" * 100)
+    sp(
         "• Global Normalization: Compares entire frequency distributions across all motifs"
     )
-    print(
+    sp(
         "• Domain-wise Normalization: Compares frequency distributions only within each motif complexity level"
     )
-    print(
+    sp(
         "• JSD values: 0 = identical distributions, 1 = maximally different distributions"
     )
-    print(
+    sp(
         "• Lower JSD = more similar temporal patterns, Higher JSD = more divergent temporal patterns"
     )
-    print(
+    sp(
         "• Each domain represents motifs of the same complexity (number of brain regions involved)"
     )
-    print("• Domain-wise analysis isolates complexity-specific developmental patterns")
-    print("• Error bars represent SEM across individual animals")
-    print("• Individual points show data from each animal")
-    print("• Kruskal-Wallis test: Non-parametric test for differences between timepoints")
-    print(
+    sp("• Domain-wise analysis isolates complexity-specific developmental patterns")
+    sp("• Error bars represent SEM across individual animals")
+    sp("• Individual points show data from each animal")
+    sp("• Kruskal-Wallis test: Non-parametric test for differences between timepoints")
+    sp(
         "• Significant Kruskal-Wallis results (p < 0.05) indicate developmental changes in motif usage"
+    )
+
+    run_metrics_df = pd.DataFrame(
+        [
+            {
+                "model": model_type,
+                "timepoints_present": ";".join(datasets_list),
+                "n_significant_global": int(n_significant_global),
+                "n_significant_domain": int(n_significant_domain),
+                "n_motifs_kw_global": len(global_kw_results),
+                "n_motifs_kw_domain": len(domain_kw_results),
+            }
+        ]
     )
 
     # New per-age plot generation
     if output_mode in ['per_age', 'both']:
-        print("\n" + "=" * 100)
-        print(f"GENERATING PER-AGE INDIVIDUAL ANIMAL PLOTS ({model_type.upper()} MODEL)")
-        print("=" * 100)
+        sp("")
+        sp("=" * 100)
+        sp(f"GENERATING PER-AGE INDIVIDUAL ANIMAL PLOTS ({model_type.upper()} MODEL)")
+        sp("=" * 100)
         generate_per_age_plots(datasets, all_motifs, RESULTS_DIR, "global")
         generate_per_age_plots(datasets, all_motifs, RESULTS_DIR, "domain")
-    
+        sp(
+            "Per-age SVG and motif_summary CSVs saved under each age subdirectory (p3, p12, p20, p60 as applicable)."
+        )
+
+    header_lines = [
+        "=" * 80,
+        f"Model: {model_type}",
+        f"Timepoints: {', '.join(datasets_list)}",
+        f"Unique motifs (ordered): {len(all_motifs)}",
+        "",
+    ]
+    for name, df in datasets.items():
+        header_lines.append(
+            f"{name}: {df['Animal_ID'].nunique()} animals, {len(df['motif label_Clean'].unique())} unique motifs"
+        )
+    header_lines.append("")
+    summary_text = "\n".join(header_lines + model_summary_lines)
+    write_mirrored_model_outputs(
+        model_results_dir, jsd_export_df, run_metrics_df, summary_text
+    )
+
     print(f"\n📁 All {model_type} model results saved to: {RESULTS_DIR}")
     
     # Restore original RESULTS_DIR for next iteration

@@ -73,36 +73,36 @@
 <p>Download and install Miniconda for your operating system:<br />
 - <a href="https://docs.anaconda.com/miniconda/install/#quick-command-line-install">Miniconda quick command-line install</a></p>
 <h4 id="step-2-create-conda-environment">Step 2: Create Conda Environment</h4>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>mapseq_processing<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.9<span class="w"> </span>pip
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda create -n mapseq_processing python==3.9 pip
+</code></pre>
 
 <h4 id="step-3-activate-environment">Step 3: Activate Environment</h4>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda activate mapseq_processing
+</code></pre>
 
 <h4 id="step-4-configure-conda-channels">Step 4: Configure Conda Channels</h4>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>config<span class="w"> </span>--add<span class="w"> </span>channels<span class="w"> </span>conda-forge
-conda<span class="w"> </span>config<span class="w"> </span>--add<span class="w"> </span>channels<span class="w"> </span>bioconda
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda config --add channels conda-forge
+conda config --add channels bioconda
+</code></pre>
 
 <h4 id="step-5-clone-repository">Step 5: Clone Repository</h4>
-<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/path/to/your/git/directory
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matsojr22/mapseq_processing_Jacobs.git
-<span class="nb">cd</span><span class="w"> </span>mapseq_processing_Jacobs
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">cd /path/to/your/git/directory
+git clone https://github.com/matsojr22/mapseq_processing_Jacobs.git
+cd mapseq_processing_Jacobs
+</code></pre>
 
 <h4 id="step-6-install-dependencies">Step 6: Install Dependencies</h4>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">pip install -r requirements.txt
+</code></pre>
 
 <h2 id="verification">Verification</h2>
 <p>After installation, verify the setup:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Activate environment</span>
-conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
+<pre class="codehilite"><code class="language-bash"># Activate environment
+conda activate mapseq_processing
 
-<span class="c1"># Test script execution</span>
-python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>--help
-</code></pre></div>
+# Test script execution
+python process-nbcm-tsv.py --help
+</code></pre>
 
 <h2 id="running-the-pipeline-recommended">Running the Pipeline (Recommended)</h2>
 <p>The primary way to run the pipeline is via the bash script and a command file:</p>
@@ -123,8 +123,8 @@ python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>--help
 - Better for batch processing<br />
 - Easier integration with workflows</p>
 <p><strong>Usage:</strong></p>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>-o<span class="w"> </span>output_dir<span class="w"> </span>-s<span class="w"> </span>sample_name<span class="w"> </span>-d<span class="w"> </span>data_file.tsv<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">python process-nbcm-tsv.py -o output_dir -s sample_name -d data_file.tsv -l &quot;RSP,PM,AM,AL,LM,neg,inj&quot;
+</code></pre>
 
 <p><strong>See</strong>: <a href="04_Main_Processing_Pipeline.html">Chapter 4: Main Processing Pipeline</a> for detailed CLI usage.</p>
 <h2 id="dependencies">Dependencies</h2>
@@ -181,24 +181,24 @@ python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span>--help
 <h2 id="environment-management">Environment Management</h2>
 <h3 id="activating-environment">Activating Environment</h3>
 <p>Always activate the conda environment before running scripts:</p>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda activate mapseq_processing
+</code></pre>
 
 <h3 id="deactivating-environment">Deactivating Environment</h3>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>deactivate
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda deactivate
+</code></pre>
 
 <h3 id="updating-dependencies">Updating Dependencies</h3>
 <p>To update packages:</p>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>activate<span class="w"> </span>mapseq_processing
-pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda activate mapseq_processing
+pip install --upgrade -r requirements.txt
+</code></pre>
 
 <h3 id="removing-environment">Removing Environment</h3>
 <p>If you need to start fresh:</p>
-<div class="codehilite"><pre><span></span><code>conda<span class="w"> </span>deactivate
-conda<span class="w"> </span>env<span class="w"> </span>remove<span class="w"> </span>-n<span class="w"> </span>mapseq_processing
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">conda deactivate
+conda env remove -n mapseq_processing
+</code></pre>
 
 <p>Then follow installation steps again.</p>
 <h2 id="troubleshooting-installation">Troubleshooting Installation</h2>

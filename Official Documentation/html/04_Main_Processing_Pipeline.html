@@ -55,12 +55,12 @@
 <p>The sections below describe the main script in detail for understanding and for manual execution of individual runs.</p>
 <h2 id="command-line-interface">Command-Line Interface</h2>
 <h3 id="basic-usage">Basic Usage</h3>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-o<span class="w"> </span>/path/to/output<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-s<span class="w"> </span>sample_name<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-d<span class="w"> </span>/path/to/data.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">python process-nbcm-tsv.py \
+    -o /path/to/output \
+    -s sample_name \
+    -d /path/to/data.tsv \
+    -l &quot;RSP,PM,AM,AL,LM,neg,inj&quot;
+</code></pre>
 
 <h3 id="required-arguments">Required Arguments</h3>
 <table>
@@ -156,18 +156,43 @@
 </tr>
 <tr>
 <td><code>--model-type</code></td>
-<td>all</td>
-<td>Which models to run: <code>uniform</code>, <code>region_specific</code>, <code>correlated</code>, <code>all</code>, etc.</td>
+<td><code>all</code></td>
+<td>One of: <code>uniform</code>, <code>region_specific</code>, <code>correlated</code>, <code>empirical</code>, <code>smoothed_empirical</code>, <code>max_entropy</code>, <code>hierarchical_correlations</code>, <code>negative_binomial</code>, <code>zero_inflated</code>, <code>bayesian_hierarchical</code>, <code>ml_nonparametric</code>, <code>all</code></td>
 </tr>
 <tr>
 <td><code>--smoothing-alpha</code></td>
 <td>1.0</td>
-<td>Smoothing parameter for smoothed_empirical model</td>
+<td>Smoothing parameter α for <code>smoothed_empirical</code></td>
+</tr>
+<tr>
+<td><code>--skip-sections</code></td>
+<td>None</td>
+<td>Comma-separated sections to skip: <code>visualizations</code>, <code>clustering</code>, <code>heatmaps</code></td>
+</tr>
+<tr>
+<td><code>--illustrator-volcano-dir</code></td>
+<td>None</td>
+<td>If set, write illustrator-ready uniform volcano SVG to this directory</td>
+</tr>
+<tr>
+<td><code>--illustrator-report-ranges-only</code></td>
+<td>False</td>
+<td>With <code>--illustrator-volcano-dir</code>: append ranges CSV only, skip SVG</td>
+</tr>
+<tr>
+<td><code>--illustrator-xlim</code></td>
+<td>None</td>
+<td>Two floats: x-axis limits for illustrator volcano</td>
+</tr>
+<tr>
+<td><code>--illustrator-ylim</code></td>
+<td>None</td>
+<td>Two floats: y-axis limits for illustrator volcano</td>
 </tr>
 <tr>
 <td><code>-A, --special_area_1</code>, <code>-B, --special_area_2</code></td>
 <td>—</td>
-<td>Optional; used for some 2-region comparisons. Behavior is now derived from labels; these are legacy/deprecated.</td>
+<td>Legacy optional region tags; most workflows use <code>-l</code> only</td>
 </tr>
 </tbody>
 </table>
@@ -213,9 +238,9 @@
 <p>Solves symbolically using SymPy and selects largest real root &gt; N_obs.</p>
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::solve_for_roots()</code></p>
 <p><strong>Root Selection</strong> (in main script after <code>solve_for_roots()</code>):</p>
-<div class="codehilite"><pre><span></span><code><span class="n">valid_N0</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span> <span class="k">if</span> <span class="n">root</span><span class="o">.</span><span class="n">is_real</span> <span class="ow">and</span> <span class="n">root</span> <span class="o">&gt;</span> <span class="n">observed_cells</span><span class="p">]</span>
-<span class="n">N0_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">valid_N0</span><span class="p">)</span>  <span class="c1"># Largest valid root</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">valid_N0 = [root for root in roots if root.is_real and root &gt; observed_cells]
+N0_value = max(valid_N0)  # Largest valid root
+</code></pre>
 
 <h3 id="step-6-anchor-model-system">Step 6: Anchor Model System</h3>
 <p><strong>Function</strong>: <code>load_anchor_model()</code> in <code>process-nbcm-tsv.py</code></p>
@@ -224,8 +249,8 @@
 - Uses anchor probabilities with local N₀ for expected counts<br />
 - Enables cross-cohort comparison</p>
 <p><strong>Expected Count Calculation</strong> (in main script):</p>
-<div class="codehilite"><pre><span></span><code><span class="n">psdict_for_expected</span> <span class="o">=</span> <span class="n">anchor_probs_loaded</span> <span class="k">if</span> <span class="n">anchor_probs_loaded</span> <span class="k">else</span> <span class="n">psdict_region_specific</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-python">psdict_for_expected = anchor_probs_loaded if anchor_probs_loaded else psdict_region_specific
+</code></pre>
 
 <p><strong>Code Reference</strong>: <code>process-nbcm-tsv.py::load_anchor_model()</code></p>
 <h3 id="step-7-probability-model-calculations">Step 7: Probability Model Calculations</h3>
@@ -372,44 +397,44 @@ $$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
 </table>
 <h2 id="anchor-model-workflow">Anchor Model Workflow</h2>
 <h3 id="creating-anchor-model-p60">Creating Anchor Model (P60)</h3>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-o<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-s<span class="w"> </span>P60_ALL<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-d<span class="w"> </span>aggregated_cleaned_matrix.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--is-anchor-model
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">python process-nbcm-tsv.py \
+    -o 02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 \
+    -s P60_ALL \
+    -d aggregated_cleaned_matrix.tsv \
+    -l &quot;RSP,PM,AM,AL,LM,neg,inj&quot; \
+    --is-anchor-model
+</code></pre>
 
 <p><strong>Outputs</strong>:<br />
 - <code>P60_ALL_Region-specific_Probabilities_N0based.csv</code><br />
 - <code>P60_ALL_Conditional_Probability_Matrix.csv</code></p>
 <h3 id="using-anchor-model-p3-p12-p20">Using Anchor Model (P3, P12, P20)</h3>
-<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>process-nbcm-tsv.py<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-o<span class="w"> </span>02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-s<span class="w"> </span>P12_ALL<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-d<span class="w"> </span>aggregated_cleaned_matrix.tsv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>-l<span class="w"> </span><span class="s2">&quot;RSP,PM,AM,AL,LM,neg,inj&quot;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--anchor-model-file<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Region-specific_Probabilities_N0based.csv<span class="w"> </span><span class="se">\</span>
-<span class="w">    </span>--anchor-correlation-file<span class="w"> </span>02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Conditional_Probability_Matrix.csv
-</code></pre></div>
+<pre class="codehilite"><code class="language-bash">python process-nbcm-tsv.py \
+    -o 02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 \
+    -s P12_ALL \
+    -d aggregated_cleaned_matrix.tsv \
+    -l &quot;RSP,PM,AM,AL,LM,neg,inj&quot; \
+    --anchor-model-file 02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Region-specific_Probabilities_N0based.csv \
+    --anchor-correlation-file 02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5/P60_ALL_Conditional_Probability_Matrix.csv
+</code></pre>
 
 <p><strong>Expected counts</strong> use P60 probabilities with local N₀.</p>
 <h2 id="code-architecture">Code Architecture</h2>
 <h3 id="main-data-flow">Main Data Flow</h3>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">Load</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">NBCM</span><span class="w"> </span><span class="n">File</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Filter</span><span class="p">[</span><span class="n">Quality</span><span class="w"> </span><span class="n">Filtering</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Filter</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Norm</span><span class="p">[</span><span class="n">Normalize</span><span class="w"> </span><span class="n">Rows</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Norm</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Proj</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Projections</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Proj</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">N0</span><span class="p">[</span><span class="n">Estimate</span><span class="w"> </span><span class="n">N₀</span><span class="p">]</span>
-<span class="w">    </span><span class="n">N0</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Anchor</span><span class="p">{</span><span class="n">Anchor</span><span class="w"> </span><span class="n">Model</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">Yes</span><span class="o">|</span><span class="w"> </span><span class="n">LoadAnchor</span><span class="p">[</span><span class="n">Load</span><span class="w"> </span><span class="n">P60</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Anchor</span><span class="w"> </span><span class="o">--&gt;|</span><span class="n">No</span><span class="o">|</span><span class="w"> </span><span class="n">LocalProbs</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Local</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="n">LoadAnchor</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Model</span><span class="w"> </span><span class="n">Probabilities</span><span class="p">]</span>
-<span class="w">    </span><span class="n">LocalProbs</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Models</span>
-<span class="w">    </span><span class="n">Models</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Stats</span><span class="p">[</span><span class="n">Statistical</span><span class="w"> </span><span class="n">Testing</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Stats</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Effect</span><span class="p">[</span><span class="n">Calculate</span><span class="w"> </span><span class="n">Effect</span><span class="w"> </span><span class="n">Sizes</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Effect</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Viz</span><span class="p">[</span><span class="n">Generate</span><span class="w"> </span><span class="n">Visualizations</span><span class="p">]</span>
-</code></pre></div>
+<pre class="codehilite"><code class="language-mermaid">flowchart TD
+    Load[Load NBCM File] --&gt; Filter[Quality Filtering]
+    Filter --&gt; Norm[Normalize Rows]
+    Norm --&gt; Proj[Calculate Projections]
+    Proj --&gt; N0[Estimate N₀]
+    N0 --&gt; Anchor{Anchor Model?}
+    Anchor --&gt;|Yes| LoadAnchor[Load P60 Probabilities]
+    Anchor --&gt;|No| LocalProbs[Calculate Local Probabilities]
+    LoadAnchor --&gt; Models[Calculate Model Probabilities]
+    LocalProbs --&gt; Models
+    Models --&gt; Stats[Statistical Testing]
+    Stats --&gt; Effect[Calculate Effect Sizes]
+    Effect --&gt; Viz[Generate Visualizations]
+</code></pre>
 
 <h3 id="key-functions">Key Functions</h3>
 <table>
@@ -486,7 +511,7 @@ $$Effect\ Size = \log_2\left(\frac{Observed + 1}{Expected + 1}\right)$$</p>
 <ol>
 <li><strong>Review outputs</strong>: Check effect significance plots and upsetplot CSVs</li>
 <li><strong>Run helper scripts</strong>: See <a href="07_Helper_Scripts.html">Chapter 7: Helper Scripts</a></li>
-<li><strong>Interpret results</strong>: See <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Interpretation</a></li>
+<li><strong>Inspect outputs</strong>: See <a href="08_Output_Files_Interpretation.html">Chapter 8: Output Files and Structure</a></li>
 </ol>
 <hr />
 <p><em>For detailed statistical methods, see <a href="05_Statistical_Methods.html">Chapter 5: Statistical Methods</a>. For probability models, see <a href="06_Probability_Models.html">Chapter 6: Probability Models</a>.</em></p>
