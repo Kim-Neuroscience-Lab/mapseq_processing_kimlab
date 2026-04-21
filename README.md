@@ -15,15 +15,19 @@ Code found here is generally a work in progress until publication.
 - Run preprocessing then main analysis scripts.
 <br/>
 
-## EXE Installation (Windows Only)
+## Simplified install & Automated processing of the publication dataset (macOS only)
 
-1. Download and [install Git](https://gitforwindows.org/) if not already installed. 
+1. Go to the [release](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases/tag/v0.4.3). 
   
-2. Download the most recent Setup_Wizard.exe from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases).
+2. Follow instructions on that page to produce the full pipeline output as described in the Docs.
 
-3. Run the file and wait for it to complete the installation (Default location is the user directory).
+**Features:**
+- **Conda environment creation**: Automatically creates the `mapseq_processing` environment
+- **Dependency installation**: Installs all required packages from `requirements.txt` and macOS command line tools
+- **GUI executable download**: Downloads the latest `MAPseq_Wizard.exe` from GitHub releases
+- **Repository cloning**: Optionally clones the repository and processes the sample data if not already present
 
-## CLI Installation
+## Standard CLI Installation for investigators
 
 1. Install mini-conda for your operating system. [mini-conda quick command line install](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)
 
@@ -66,7 +70,7 @@ pip install -r requirements.txt
 
 ### MAPseq_Wizard.py
 
-A graphical user interface wrapper for the main `process-nbcm-tsv.py` script, providing an easy-to-use form for all processing parameters.
+An experimental graphical user interface wrapper for the main `process-nbcm-tsv.py` script, providing an easy-to-use form for all processing parameters. Not suitable for large batches. Use only for processing test datasets as you develop your analysis.
 
 **Features:**
 - **PySimpleGUI interface**: User-friendly form with file browsers and input fields
@@ -84,73 +88,6 @@ python MAPseq_Wizard.py
 - Conda environment `mapseq_processing` (or modify the script to use your environment)
 
 **Note:** The GUI currently requires preprocessing to be done in the terminal. Future versions may include preprocessing functionality.
-
-### setup_wizard.py
-
-Installation wizard for Windows users that automates the setup process.
-
-**Features:**
-- **Conda environment creation**: Automatically creates the `mapseq_processing` environment
-- **Dependency installation**: Installs all required packages from `requirements.txt`
-- **GUI executable download**: Downloads the latest `MAPseq_Wizard.exe` from GitHub releases
-- **Repository cloning**: Optionally clones the repository if not already present
-
-**Usage:**
-```bash
-python setup_wizard.py
-```
-
-**Windows Executable:**
-For Windows users who prefer not to use Python directly, download `Setup_Wizard.exe` from the [releases page](https://github.com/matsojr22/mapseq_processing_Jacobs/releases). This executable:
-- Installs all necessary dependencies
-- Creates the conda environment
-- Downloads and sets up the GUI executable
-- Provides a complete installation without requiring manual Python setup
-
-**Note:** The setup wizard detects the repository location automatically and can work with both local repositories and GitHub-hosted repositories.
-
-### setup_wizard_with_sample.py (installer + optional sample batch)
-
-Same Miniconda / conda env / `pip install -r requirements.txt` flow as `setup_wizard.py`, plus an optional prompt to run the published sample via `run_commands.sh` after setup (non-Windows; on Windows, instructions are printed).
-
-**From source (any OS with Python 3.9+):**
-
-```bash
-python setup_wizard_with_sample.py
-```
-
-**Pre-built binaries (no Python required):** Built with PyInstaller and attached to [GitHub Releases](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases) when a version tag (`v*`) is pushed. Download the asset that matches your OS:
-
-| Asset | Platform |
-|--------|----------|
-| `setup_wizard_with_sample-Windows.exe` | Windows |
-| `setup_wizard_with_sample-macOS` | macOS |
-| `setup_wizard_with_sample-Linux` | Linux (x86_64, built on Ubuntu runner) |
-
-**First-run security prompts (unsigned binaries):**
-
-- **macOS:** If Gatekeeper blocks the app, use **Right-click → Open**, or **System Settings → Privacy & Security** and choose Open.
-- **Windows:** If SmartScreen appears, use **More info → Run anyway** (unless you use a signed build).
-
-**What the wizard needs:** Network access to download Miniconda (if not already installed), install Python packages, and—if you are not already inside a git clone of this repo—to `git clone` [this repository](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab). The optional sample batch expects the shipped files under `raw_data_sources/`.
-
-**Maintainers:** Build locally with `pip install pyinstaller requests` and `pyinstaller setup_wizard_with_sample.spec` (see `setup_wizard_with_sample.spec`). CI workflow: `.github/workflows/build-setup-wizard-with-sample.yml`.
-
----
-
-7. Run the preprocessing script to clean and aggregate your replicate TSV files (see Preprocessing Scripts section below for details)
-
-```
-python preprocess_and_aggregate.py -i /home/mwjacobs/git/mapseq_processing_jacobs/predata/adults/ -o /home/mwjacobs/git/mapseq_processing_jacobs/data/adults/
-```
-
-8. Run the main analysis script on your sample.nbcm.tsv (command below shown using included sample dataset, but typically you would run using your aggregated data from the prior step)
-
-```
-python process-nbcm-tsv.py -o /home/mwjacobs/git/mapseq_processing_jacobs/jr0375_out/ -s JR0375 -d /home/mwjacobs/git/mapseq_processing_jacobs/sample_data/JR0375.nbcm.tsv -u 2 -l "RSP,PM,AM,A,RL,AL,LM,neg,inj"
-```
-
-<br/>
 
 ---
 
