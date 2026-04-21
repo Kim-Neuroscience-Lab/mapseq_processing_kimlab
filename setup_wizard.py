@@ -1,15 +1,28 @@
+import json
 import os
-import subprocess
 import platform
-import shutil
-import sys
-import requests
 import re
+import shutil
+import subprocess
+import sys
+
+import requests
 
 ENV_NAME = "mapseq_processing"
 GUI_VERSION = "v0.2.0-beta"
 
 DEFAULT_CLONE_REPOSITORY_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git"
+
+
+def get_clone_repository_url():
+    """URL for `git clone` during setup.
+
+    Defaults to the public lab repo so running the wizard from a fork does not clone
+    the fork. Override with MAPSEQ_WIZARD_CLONE_URL (non-empty).
+    """
+    override = os.environ.get("MAPSEQ_WIZARD_CLONE_URL", "").strip()
+    return override if override else DEFAULT_CLONE_REPOSITORY_URL
+
 
 def get_conda_path(install_path):
     """Get platform-specific conda executable path"""
@@ -59,13 +72,148 @@ def is_git_repo(path):
     """Check if a directory is a git repository"""
     return os.path.exists(os.path.join(path, ".git"))
 
+def _ensure_macos_git_on_path():
+    """If /usr/bin/git exists (Xcode CLT) but PATH does not resolve `git`, prepend /usr/bin."""
+    if platform.system() != "Darwin":
+        return
+    git_bin = "/usr/bin/git"
+    if not (os.path.isfile(git_bin) and os.access(git_bin, os.X_OK)):
+        return
+    if shutil.which("git"):
+        return
+    os.environ["PATH"] = "/usr/bin" + os.pathsep + os.environ.get("PATH", "")
+
+
 def check_git_installed():
     """Check if git is available in PATH"""
+    _ensure_macos_git_on_path()
     try:
         subprocess.run(["git", "--version"], capture_output=True, check=True)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
+
+
+def _prepend_windows_git_to_path():
+    """If Git for Windows is installed but not on PATH, prepend Git\\cmd."""
+    if platform.system() != "Windows":
+        return
+    pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+    pfx = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    for d in (
+        os.path.join(pf, "Git", "cmd"),
+        os.path.join(pfx, "Git", "cmd"),
+    ):
+        git_exe = os.path.join(d, "git.exe")
+        if os.path.isfile(git_exe):
+            os.environ["PATH"] = d + os.pathsep + os.environ.get("PATH", "")
+            return
+
+
+def auto_install_git():
+    """Try to install Git using the OS package manager or GUI installer. Returns True if git works after."""
+    if check_git_installed():
+        return True
+
+    system = platform.system()
+    print("\n📥 Git was not found in PATH. Attempting automatic installation...")
+
+    if system == "Darwin":
+        # Homebrew requires git to run; "brew install git" fails when git is missing and can error on
+        # broken legacy installs. Prefer Apple Command Line Tools (ships /usr/bin/git).
+        try:
+            print("   Launching Apple Command Line Tools installer (includes git)...")
+            subprocess.run(["xcode-select", "--install"], check=False)
+        except FileNotFoundError:
+            pass
+        print("   Approve the dialog if shown, wait for installation to finish, then continue here.")
+        input("   Press Enter when Command Line Tools installation has finished (or if already installed)...")
+        if check_git_installed():
+            print("✅ Git is now available.")
+            return True
+        print(
+            "⚠️  Git still not detected. Open a **new** Terminal window and run this wizard again, or install manually:\n"
+            "   https://git-scm.com/download/mac\n"
+            "   (Homebrew needs git before it can install packages—install Command Line Tools or git first.)"
+        )
+        return False
+
+    if system == "Windows":
+        winget = shutil.which("winget")
+        if winget:
+            try:
+                print("   Running: winget install Git.Git")
+                subprocess.run(
+                    [
+                        winget,
+                        "install",
+                        "--id",
+                        "Git.Git",
+                        "-e",
+                        "--source",
+                        "winget",
+                        "--accept-package-agreements",
+                        "--accept-source-agreements",
+                    ],
+                    check=False,
+                    timeout=600,
+                )
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+        _prepend_windows_git_to_path()
+        if check_git_installed():
+            print("✅ Git is now available.")
+            return True
+        print(
+            "⚠️  Automatic install did not make `git` available in this session.\n"
+            "   Install from https://gitforwindows.org/ , restart the terminal, and run this wizard again."
+        )
+        return False
+
+    if system == "Linux":
+        if shutil.which("apt-get"):
+            try:
+                print("   Running: sudo apt-get install -y git (enter your password if prompted)")
+                subprocess.run(["sudo", "apt-get", "update", "-qq"], check=False)
+                r = subprocess.run(["sudo", "apt-get", "install", "-y", "git"])
+                if r.returncode == 0 and check_git_installed():
+                    print("✅ Git is now available.")
+                    return True
+            except (FileNotFoundError, subprocess.SubprocessError):
+                pass
+        if shutil.which("dnf"):
+            try:
+                print("   Running: sudo dnf install -y git")
+                r = subprocess.run(["sudo", "dnf", "install", "-y", "git"])
+                if r.returncode == 0 and check_git_installed():
+                    print("✅ Git is now available.")
+                    return True
+            except (FileNotFoundError, subprocess.SubprocessError):
+                pass
+        if shutil.which("yum"):
+            try:
+                print("   Running: sudo yum install -y git")
+                r = subprocess.run(["sudo", "yum", "install", "-y", "git"])
+                if r.returncode == 0 and check_git_installed():
+                    print("✅ Git is now available.")
+                    return True
+            except (FileNotFoundError, subprocess.SubprocessError):
+                pass
+        if shutil.which("pacman"):
+            try:
+                print("   Running: sudo pacman -S --noconfirm git")
+                r = subprocess.run(["sudo", "pacman", "-S", "--noconfirm", "git"])
+                if r.returncode == 0 and check_git_installed():
+                    print("✅ Git is now available.")
+                    return True
+            except (FileNotFoundError, subprocess.SubprocessError):
+                pass
+        print("⚠️  Could not install git automatically. Install with your distribution's package manager.")
+        return False
+
+    print("⚠️  Automatic git installation is not implemented for this OS.")
+    return False
+
 
 def prompt_git_installation():
     """Prompt user to install git with platform-specific instructions"""
@@ -88,7 +236,10 @@ def prompt_git_installation():
     return response.lower() == 'y'
 
 def get_git_remote_url(repo_path=None):
-    """Get the git remote URL from the current repository"""
+    """Resolve ``origin`` for the repo containing this script (e.g. GUI release URL via get_gui_exe_url).
+
+    Not used for install-time ``git clone``; use get_clone_repository_url() for that.
+    """
     if repo_path is None:
         repo_path = os.path.dirname(os.path.abspath(__file__))
     
@@ -192,8 +343,36 @@ def install_miniconda(install_path):
         except OSError:
             pass
 
-def conda(cmd, conda_exe):
-    subprocess.run([conda_exe] + cmd, check=True)
+def conda_env_exists(conda_exe, env_name):
+    """Return True if a named conda environment already exists."""
+    try:
+        r = subprocess.run(
+            [conda_exe, "info", "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        data = json.loads(r.stdout)
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        return False
+    for p in data.get("envs", []):
+        if os.path.basename(os.path.normpath(p)) == env_name:
+            return True
+    return False
+
+
+def conda_run(conda_exe, args):
+    """Run conda; on failure print stdout/stderr (conda often prints errors to stdout)."""
+    r = subprocess.run([conda_exe] + args, capture_output=True, text=True)
+    if r.returncode != 0:
+        print("\n--- conda output (for debugging) ---")
+        if r.stdout:
+            print(r.stdout)
+        if r.stderr:
+            print(r.stderr, file=sys.stderr)
+        print("--- end conda output ---\n")
+    r.check_returncode()
+    return r
 
 def download_gui_exe(url, target_path):
     """Download GUI exe with enhanced error handling"""
@@ -259,9 +438,12 @@ def print_post_installation_instructions(repo_path):
     print(f"   python {os.path.join(repo_path, 'preprocess_and_aggregate.py')} -i <input_dir> -o <output_dir>")
     
     print("\n2️⃣  MAIN PROCESSING:")
-    print("   Option A - GUI (Windows):")
-    print(f"   Run MAPseq_Wizard.exe from: {repo_path}")
-    print("   Option B - Command Line:")
+    if platform.system() == "Windows":
+        print("   Option A - GUI (Windows):")
+        print(f"   Run MAPseq_Wizard.exe from: {repo_path}")
+        print("   Option B - Command Line:")
+    else:
+        print("   Command line:")
     print("   conda activate mapseq_processing")
     print(f"   python {os.path.join(repo_path, 'process-nbcm-tsv.py')} -o <out_dir> -s <sample> -d <data_file> -l <labels>")
     
@@ -292,16 +474,17 @@ def print_post_installation_instructions(repo_path):
     
     print("\n4️⃣  BATCH EXECUTION (alternative to running scripts individually):")
     print("   conda activate mapseq_processing")
-    print(f"   bash {os.path.join(repo_path, 'run_commands.sh')}")
-    print("   (Runs all_commands.txt by default; pass another file as the first argument to override.)")
+    rc = os.path.join(repo_path, "run_commands.sh")
+    print(f"   bash {rc}")
+    print(f"   bash {rc} all_commands.local.txt")
+    print(
+        "   (First form runs all_commands.txt by default. Use the second form if you have "
+        "all_commands.local.txt from setup_wizard_with_sample path resolution.)"
+    )
     
     print("\n5️⃣  QUALITY CONTROL:")
     print("   conda activate mapseq_processing")
     print(f"   python {os.path.join(repo_path, 'postprocessing_checks.py')}")
-    
-    print("\n6️⃣  FIGURE GENERATION:")
-    print("   conda activate mapseq_processing")
-    print(f"   python {os.path.join(repo_path, 'figure_generation', 'generate_figure_from_outputs.py')}")
     
     print("\n" + "="*70)
     print("📖 For detailed documentation, see README.md")
@@ -310,21 +493,45 @@ def print_post_installation_instructions(repo_path):
 def create_env_and_setup(conda_exe, install_dir, repo_path=None):
     """Create conda environment and set up the repository"""
     print(f"\n📦 Creating environment '{ENV_NAME}'...")
-    conda(["create", "-y", "-n", ENV_NAME, "python=3.9", "pip"], conda_exe)
+    if conda_env_exists(conda_exe, ENV_NAME):
+        print(
+            f"   Environment '{ENV_NAME}' already exists — skipping conda create.\n"
+            "   (Remove it first with: conda env remove -n "
+            f"{ENV_NAME} — only if you want a clean reinstall.)"
+        )
+    else:
+        # Use conda-forge only so we do not require accepting Anaconda, Inc. ToS for pkgs/main.
+        conda_run(
+            conda_exe,
+            [
+                "create",
+                "-y",
+                "-n",
+                ENV_NAME,
+                "-c",
+                "conda-forge",
+                "--override-channels",
+                "python=3.9",
+                "pip",
+            ],
+        )
 
     print("🔁 Adding channels: conda-forge, bioconda")
-    conda(["config", "--add", "channels", "conda-forge"], conda_exe)
-    conda(["config", "--add", "channels", "bioconda"], conda_exe)
+    conda_run(conda_exe, ["config", "--add", "channels", "conda-forge"])
+    conda_run(conda_exe, ["config", "--add", "channels", "bioconda"])
 
     # Determine repository path
     if repo_path is None:
         # Not in a repo, need to clone
         print("🐙 Cloning project repository...")
-        git_url = get_git_remote_url()
+        git_url = get_clone_repository_url()
+        print(f"   {git_url}")
         repo_name = os.path.basename(git_url.rstrip('.git')) if git_url.endswith('.git') else os.path.basename(git_url)
         git_dir = os.path.join(install_dir, repo_name)
         
         if not os.path.exists(git_dir):
+            if not check_git_installed():
+                auto_install_git()
             if not check_git_installed():
                 if not prompt_git_installation():
                     print("\n⚠️  Setup will continue, but you'll need to clone the repository manually.")

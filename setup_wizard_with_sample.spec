@@ -33,7 +33,8 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX-packed one-file binaries are often SIGKILL'd on macOS (Apple Silicon); keep off for releases.
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
