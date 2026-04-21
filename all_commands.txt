@@ -1,0 +1,81 @@
+# ============================================================================
+# MAPseq kimlab — command template (paths use __REPO_ROOT__; setup_wizard_with_sample
+# writes all_commands.local.txt with your repo path substituted).
+# Published sample: per-animal .nbcm.all.tsv files under raw_data_sources/ (see
+# all_commands.jacobs_reference.txt for the full Jacobs-machine pipeline).
+# ============================================================================
+# Parameterization: 05.HAN_filter_parameters_i300_r10_t10_u5
+# ============================================================================
+
+# ============================================================================
+# Main processing — individual animals (shipped sample files only)
+# ============================================================================
+
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0695 -d __REPO_ROOT__/raw_data_sources/p60/jr0695.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0694 -d __REPO_ROOT__/raw_data_sources/p60/jr0694.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0692 -d __REPO_ROOT__/raw_data_sources/p60/jr0692.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0552 -d __REPO_ROOT__/raw_data_sources/p60/JR0552.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0548 -d __REPO_ROOT__/raw_data_sources/p60/JR0548.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0547 -d __REPO_ROOT__/raw_data_sources/p60/JR0547.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0448 -d __REPO_ROOT__/raw_data_sources/p60/jr0448.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0446 -d __REPO_ROOT__/raw_data_sources/p60/jr0446.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s m777 -d __REPO_ROOT__/raw_data_sources/p12/M777.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0686 -d __REPO_ROOT__/raw_data_sources/p12/jr0686.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0671 -d __REPO_ROOT__/raw_data_sources/p12/JR0671.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0670 -d __REPO_ROOT__/raw_data_sources/p12/jr0670.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0422 -d __REPO_ROOT__/raw_data_sources/p12/jr0422.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p12/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0420 -d __REPO_ROOT__/raw_data_sources/p12/jr0420.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p20/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0678 -d __REPO_ROOT__/raw_data_sources/p20/jr0678.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p20/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0674 -d __REPO_ROOT__/raw_data_sources/p20/jr0674.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+python process-nbcm-tsv.py -o __REPO_ROOT__/02_output/p20/05.HAN_filter_parameters_i300_r10_t10_u5 -s jr0672 -d __REPO_ROOT__/raw_data_sources/p20/jr0672.nbcm.all.tsv -i 300 -r 10 -t 10 -u 5 -l "rsp,pm,am,al,lm,neg,inj" --force_user_threshold
+
+# ============================================================================
+# PHASE 4: Helper scripts (05.HAN_filter_parameters_i300_r10_t10_u5)
+# ============================================================================
+
+python helpers/scripts/01_motif_analysis_per_animal.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/01_motif_analysis_per_animal --output_mode both --export_wide_for_prism
+python helpers/scripts/02_projection_analysis.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/02_projection_analysis
+python helpers/scripts/03_composition.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/03_composition
+python helpers/scripts/04_proportions_over_time_stats.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/04_proportions_over_time_stats
+python helpers/scripts/05_motif_analysis.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/05_motif_analysis
+python helpers/scripts/18_mean_jsd_transition_tests.py --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/18_mean_jsd_transition_tests
+python helpers/scripts/06_all_motif_divergence.py --input_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/05_motif_analysis --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/06_all_motif_divergence
+python helpers/scripts/17_jsd_cross_source_summary.py --base_output_dir __REPO_ROOT__/02_output --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/17_jsd_cross_source_summary
+mkdir -p __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input
+# Copy uniform model upsetplot files
+find __REPO_ROOT__/02_output -type f \( -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/uniform/*_ALL_*_filters_upsetplot_uniform.csv' -o -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/uniform/*_alL_*_filters_upsetplot_uniform.csv' \) | xargs -I {} cp {} __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input/
+# Copy region_specific model upsetplot files
+find __REPO_ROOT__/02_output -type f \( -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/region_specific/*_ALL_*_filters_upsetplot_region_specific.csv' -o -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/region_specific/*_alL_*_filters_upsetplot_region_specific.csv' \) | xargs -I {} cp {} __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input/
+# Copy proportional_effectsize model upsetplot files (saved in region_specific directory)
+find __REPO_ROOT__/02_output -type f \( -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/region_specific/*_ALL_*_filters_upsetplot_proportional_effectsize.csv' -o -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/region_specific/*_alL_*_filters_upsetplot_proportional_effectsize.csv' \) | xargs -I {} cp {} __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input/
+# Copy correlated model upsetplot files
+find __REPO_ROOT__/02_output -type f \( -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/correlated/*_ALL_*_filters_upsetplot_correlated.csv' -o -path '*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/correlated/*_alL_*_filters_upsetplot_correlated.csv' \) | xargs -I {} cp {} __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input/
+# Copy new model upsetplot files (empirical, smoothed_empirical, max_entropy, etc.)
+for model in empirical smoothed_empirical max_entropy hierarchical_correlations negative_binomial zero_inflated bayesian_hierarchical ml_nonparametric; do
+  find __REPO_ROOT__/02_output -type f \( -path "*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/${model}/*_ALL_*_filters_upsetplot_${model}.csv" -o -path "*/05.HAN_filter_parameters_i300_r10_t10_u5/analysis/${model}/*_alL_*_filters_upsetplot_${model}.csv" \) | xargs -I {} cp {} __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input/ 2>/dev/null || true
+done
+python helpers/scripts/07_motif_significange_trajectories.py --input_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_motif_significange_trajectories --unified_yaxis
+python helpers/scripts/15_volcano_trajectories.py --input_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_input --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/15_volcano_trajectories
+python helpers/scripts/08_motif_clustering.py --input_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/07_motif_significange_trajectories --helper_output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/08_motif_clustering
+python helpers/scripts/09_plot_normalized_projection_strength_data.py __REPO_ROOT__/02_output --output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/09_plot_normalized_projection_strength_data --file_type aggregate --all_ages_base_dir __REPO_ROOT__/02_output
+python helpers/scripts/10_plot_per_cell_projection_strength_across_ages.py __REPO_ROOT__/02_output --output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/10_plot_per_cell_projection_strength_across_ages --all_ages_base_dir __REPO_ROOT__/02_output
+
+# Quality Control
+python postprocessing_checks.py --repo_root __REPO_ROOT__ --base_output_dir __REPO_ROOT__/02_output/p60/05.HAN_filter_parameters_i300_r10_t10_u5 --output __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_qc_report.txt
+
+# Aggregate projection summaries
+python helpers/scripts/13_aggregate_projection_summaries.py --base_dir __REPO_ROOT__ --parameterization 05.HAN_filter_parameters_i300_r10_t10_u5 --output_dir __REPO_ROOT__/02_output/05.HAN_filter_parameters_i300_r10_t10_u5_helpers/13_aggregate_projection_summaries
+
+# Figure generation
+python figure_generation/generate_figure_from_outputs.py
+python figure_generation/generate_illustrator_volcanoes.py
+
+# Conclusions (optional lab narrative)
+cd __REPO_ROOT__/conclusions/scripts
+python extract_stability_data.py --parameterization 05.HAN_filter_parameters_i300_r10_t10_u5
+python generate_conclusions.py
+cd __REPO_ROOT__
+python conclusions/scripts/generate_html.py \
+    --input conclusions/stability_analysis_conclusions.md \
+    --output conclusions/stability_analysis_conclusions.html \
+    --title "MAPseq Stability Analysis Conclusions"

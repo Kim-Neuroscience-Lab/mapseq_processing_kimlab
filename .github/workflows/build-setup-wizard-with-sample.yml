@@ -1,0 +1,80 @@
+# Build PyInstaller binaries for setup_wizard_with_sample.py (Windows, macOS, Linux).
+# On version tags (v*), attaches assets to the GitHub Release.
+
+name: Build setup_wizard_with_sample
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            slug: windows
+            asset: setup_wizard_with_sample-Windows.exe
+          - os: macos-latest
+            slug: macos
+            asset: setup_wizard_with_sample-macOS
+          - os: ubuntu-latest
+            slug: linux
+            asset: setup_wizard_with_sample-Linux
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyInstaller and dependencies
+        run: pip install pyinstaller requests
+
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm setup_wizard_with_sample.spec
+
+      - name: Stage release asset
+        shell: bash
+        run: |
+          mkdir -p staging
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp dist/setup_wizard_with_sample.exe "staging/${{ matrix.asset }}"
+          else
+            cp dist/setup_wizard_with_sample "staging/${{ matrix.asset }}"
+            chmod +x "staging/${{ matrix.asset }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wizard-${{ matrix.slug }}
+          path: staging/${{ matrix.asset }}
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
+          pattern: wizard-*
+          merge-multiple: true
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-files/**
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

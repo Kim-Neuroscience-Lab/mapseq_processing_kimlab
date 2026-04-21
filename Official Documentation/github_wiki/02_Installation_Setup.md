@@ -7,7 +7,7 @@
 The MAPseq processing pipeline supports:
 - **Linux** (tested on Ubuntu 20.04+)
 - **macOS** (tested on macOS 10.15+)
-- **Windows** (via WSL; for an experimental GUI installer see [Chapter 14: Experimental Features](14_Experimental_Features.md))
+- **Windows** (via WSL; for an experimental GUI installer see [Chapter 14: Experimental Features](14_Experimental_Features))
 
 ### Software Dependencies
 
@@ -23,7 +23,7 @@ The MAPseq processing pipeline supports:
 
 ## Installation Methods
 
-Use the following steps on all platforms (Linux, macOS, Windows with WSL). Windows users looking for an experimental GUI installer can see [Chapter 14: Experimental Features](14_Experimental_Features.md).
+Use the following steps on all platforms (Linux, macOS, Windows with WSL). Windows users looking for an experimental GUI installer can see [Chapter 14: Experimental Features](14_Experimental_Features).
 
 ### Command-Line Installation
 
@@ -90,7 +90,7 @@ The primary way to run the pipeline is via the bash script and a command file:
    The script reads the command file line by line (default `all_commands.txt`; pass another file as the first argument to override), executes each command in order, and logs output to a timestamped file named `processing_YYYYMMDD_HHMMSS.log`. The script continues even if individual commands fail; check the log file to identify any failures.
 3. **Review output**: Results are written to the output directories specified in the command file.
 
-For experimental GUI options, see [Chapter 14: Experimental Features](14_Experimental_Features.md).
+For experimental GUI options, see [Chapter 14: Experimental Features](14_Experimental_Features).
 
 ## Command-Line Interface
 
@@ -105,7 +105,7 @@ For experimental GUI options, see [Chapter 14: Experimental Features](14_Experim
 python process-nbcm-tsv.py -o output_dir -s sample_name -d data_file.tsv -l "RSP,PM,AM,AL,LM,neg,inj"
 ```
 
-**See**: [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline.md) for detailed CLI usage.
+**See**: [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline) for detailed CLI usage.
 
 ## Dependencies
 
@@ -127,7 +127,7 @@ Key packages required for the pipeline:
 
 ### Optional Dependencies
 
-See `requirements.txt` for the complete list. For optional dependencies used by experimental GUI tools, see [Chapter 14: Experimental Features](14_Experimental_Features.md).
+See `requirements.txt` for the complete list. For optional dependencies used by experimental GUI tools, see [Chapter 14: Experimental Features](14_Experimental_Features).
 
 ## Environment Management
 
@@ -187,7 +187,7 @@ Then follow installation steps again.
 
 ### Getting Help
 
-- Check [Chapter 12: Troubleshooting and Best Practices](12_Troubleshooting_Best_Practices.md)
+- Check [Chapter 12: Troubleshooting and Best Practices](12_Troubleshooting_Best_Practices)
 - Review error messages carefully
 - Verify all dependencies are installed
 - Check Python version matches requirements
@@ -196,7 +196,7 @@ Then follow installation steps again.
 
 After successful installation:
 
-1. **Prepare your data**: See [Chapter 3: Data Preparation](03_Data_Preparation.md). Run preprocessing to produce an aggregated matrix:
+1. **Prepare your data**: See [Chapter 3: Data Preparation](03_Data_Preparation). Run preprocessing to produce an aggregated matrix:
    ```bash
    python preprocess_and_aggregate.py -i /path/to/input/nbcm_files/ -o /path/to/output/
    ```
@@ -204,9 +204,9 @@ After successful installation:
    ```bash
    python process-nbcm-tsv.py -o /path/to/output/ -s sample_name -d /path/to/data.tsv -l "RSP,PM,AM,AL,LM,neg,inj"
    ```
-   See [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline.md) for all arguments.
-3. **Run helper scripts**: See [Chapter 7: Helper Scripts](07_Helper_Scripts.md). The command file can include helper script commands in the correct order; otherwise run them individually after main processing.
+   See [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline) for all arguments.
+3. **Run helper scripts**: See [Chapter 7: Helper Scripts](07_Helper_Scripts). The command file can include helper script commands in the correct order; otherwise run them individually after main processing.
 
 ---
 
-*For detailed usage instructions, proceed to [Chapter 3: Data Preparation](03_Data_Preparation.md).*
+*For detailed usage instructions, proceed to [Chapter 3: Data Preparation](03_Data_Preparation).*

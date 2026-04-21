@@ -14,7 +14,7 @@ where `{parameterization}` matches your main output folder (e.g. `05.HAN_filter_
 |------|---------|--------|
 | **Core** | 01–06, 07 (with prepared `07_input`), 08, 09, 15; often 13 | Typical developmental / trajectory workflow. |
 | **Often in repo command file** | 17, 18, `10_plot_per_cell_projection_strength_across_ages.py` | Extra summaries or plots; depend on 01 and/or 05. |
-| **Maintainer / lab-only** | 00, `10_compare_datasets_pipeline.py`, 11, 12, 16 | Barcode QC, external dataset compares, manuscript power analysis. See [Chapter 14](14_Experimental_Features.md). |
+| **Maintainer / lab-only** | 00, `10_compare_datasets_pipeline.py`, 11, 12, 16 | Barcode QC, external dataset compares, manuscript power analysis. See [Chapter 14](14_Experimental_Features). |
 
 The **MAPseq_wizard** GUI lists only a subset of helpers; the authoritative list is this chapter and your edited `all_commands.txt`.
 
@@ -130,7 +130,7 @@ Key files: `combined_effect_sizes_{model}.csv`, `transition_significance.csv`
 
 **CLI** (common): `--use_fdr_for_significant`, `--exploratory_trend_pvalue`, `--unified_yaxis`
 
-Details: [Chapter 5: Statistical Methods](05_Statistical_Methods.md)
+Details: [Chapter 5: Statistical Methods](05_Statistical_Methods)
 
 ---
 
@@ -196,7 +196,7 @@ Details: [Chapter 5: Statistical Methods](05_Statistical_Methods.md)
 
 **CLI** (non-exhaustive): `--methods`, `--distance_metrics`, `--bootstrap_ci`, `--permutation_n`, `--input_dir`, `--helper_output_dir`, `--transition_significance_dir`
 
-File-level reference: [Chapter 8](08_Output_Files_Interpretation.md), [Chapter 15](15_Trajectory_Results_Interpretation.md)
+File-level reference: [Chapter 8](08_Output_Files_Interpretation), [Chapter 15](15_Trajectory_Results_Interpretation)
 
 ---
 
@@ -216,7 +216,7 @@ These require **external** datasets and are usually absent from minimal command 
 - `helpers/scripts/11_compare_vsv_mapseq_two_way.py`  
 - `helpers/scripts/12_compare_datasets_pipeline_mapseq.py` (three-way)
 
-See [Chapter 14: Experimental Features](14_Experimental_Features.md).
+See [Chapter 14: Experimental Features](14_Experimental_Features).
 
 ---
 
@@ -227,7 +227,7 @@ See [Chapter 14: Experimental Features](14_Experimental_Features.md).
 python helpers/scripts/01_motif_analysis_per_animal.py --help
 ```
 
-Batch mode: list commands in `all_commands.txt` and run `./run_commands.sh` from the repo root (see [Chapter 4](04_Main_Processing_Pipeline.md)).
+Batch mode: list commands in `all_commands.txt` and run `./run_commands.sh` from the repo root (see [Chapter 4](04_Main_Processing_Pipeline)).
 
 ## Output directory structure (reference)
 
@@ -276,4 +276,4 @@ Batch mode: list commands in `all_commands.txt` and run `./run_commands.sh` from
 
 ---
 
-*Maintainer utilities (00 teleporting barcodes, 16 power, figure batch, conclusions): [Chapter 14: Experimental Features](14_Experimental_Features.md). Output file names: [Chapter 8](08_Output_Files_Interpretation.md).*
+*Maintainer utilities (00 teleporting barcodes, 16 power, figure batch, conclusions): [Chapter 14: Experimental Features](14_Experimental_Features). Output file names: [Chapter 8](08_Output_Files_Interpretation).*

@@ -112,7 +112,7 @@ python process-nbcm-tsv.py --help
 <code>bash
    chmod +x run_commands.sh
    ./run_commands.sh</code><br />
-   If you use the copy in <code>bash/</code>, run <code>chmod +x bash/run_commands.sh</code> and then <code>./bash/run_commands.sh</code>. The script reads the command file line by line, executes each command in order, and logs output to a timestamped file named <code>processing_YYYYMMDD_HHMMSS.log</code>. The script continues even if individual commands fail; check the log file to identify any failures.</li>
+   The script reads the command file line by line (default <code>all_commands.txt</code>; pass another file as the first argument to override), executes each command in order, and logs output to a timestamped file named <code>processing_YYYYMMDD_HHMMSS.log</code>. The script continues even if individual commands fail; check the log file to identify any failures.</li>
 <li><strong>Review output</strong>: Results are written to the output directories specified in the command file.</li>
 </ol>
 <p>For experimental GUI options, see <a href="14_Experimental_Features.html">Chapter 14: Experimental Features</a>.</p>

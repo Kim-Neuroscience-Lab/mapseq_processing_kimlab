@@ -1,15 +1,47 @@
+"""
+MAPseq setup wizard plus optional published sample batch run.
+
+Based on setup_wizard.py (same Miniconda/env/pip flow). Use this entrypoint when you
+want the post-setup prompt to process the published sample via run_commands.sh.
+setup_wizard.py is left unchanged as the original foundation.
+"""
 import os
 import subprocess
 import platform
-import shutil
-import sys
 import requests
 import re
 
 ENV_NAME = "mapseq_processing"
 GUI_VERSION = "v0.2.0-beta"
 
+# Used when `git remote get-url origin` cannot be read (e.g. script copied outside a clone).
 DEFAULT_CLONE_REPOSITORY_URL = "https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab.git"
+
+REPO_ROOT_PLACEHOLDER = "__REPO_ROOT__"
+LOCAL_COMMANDS_BASENAME = "all_commands.local.txt"
+COMMANDS_TEMPLATE_BASENAME = "all_commands.txt"
+
+# Paths under raw_data_sources/ shipped with the published sample (see all_commands.txt)
+EXPECTED_SAMPLE_RAW_FILES = (
+    "raw_data_sources/p60/jr0695.nbcm.all.tsv",
+    "raw_data_sources/p60/jr0694.nbcm.all.tsv",
+    "raw_data_sources/p60/jr0692.nbcm.all.tsv",
+    "raw_data_sources/p60/JR0552.nbcm.all.tsv",
+    "raw_data_sources/p60/JR0548.nbcm.all.tsv",
+    "raw_data_sources/p60/JR0547.nbcm.all.tsv",
+    "raw_data_sources/p60/jr0448.nbcm.all.tsv",
+    "raw_data_sources/p60/jr0446.nbcm.all.tsv",
+    "raw_data_sources/p12/M777.nbcm.all.tsv",
+    "raw_data_sources/p12/jr0686.nbcm.all.tsv",
+    "raw_data_sources/p12/JR0671.nbcm.all.tsv",
+    "raw_data_sources/p12/jr0670.nbcm.all.tsv",
+    "raw_data_sources/p12/jr0422.nbcm.all.tsv",
+    "raw_data_sources/p12/jr0420.nbcm.all.tsv",
+    "raw_data_sources/p20/jr0678.nbcm.all.tsv",
+    "raw_data_sources/p20/jr0674.nbcm.all.tsv",
+    "raw_data_sources/p20/jr0672.nbcm.all.tsv",
+)
+
 
 def get_conda_path(install_path):
     """Get platform-specific conda executable path"""
@@ -17,6 +49,7 @@ def get_conda_path(install_path):
         return os.path.join(install_path, "Scripts", "conda.exe")
     else:
         return os.path.join(install_path, "bin", "conda")
+
 
 def get_default_install_path():
     """Get platform-specific default Miniconda install path"""
@@ -28,36 +61,39 @@ def get_default_install_path():
     else:  # Linux
         return os.path.expanduser("~/miniconda3")
 
+
 def get_miniconda_installer_info():
     """Get platform-specific Miniconda installer URL and filename"""
     system = platform.system()
     machine = platform.machine().lower()
-    
+
     if system == "Windows":
         return (
             "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe",
-            "Miniconda3.exe"
+            "Miniconda3.exe",
         )
     elif system == "Darwin":  # macOS
         if machine == "arm64" or machine == "aarch64":
             return (
                 "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh",
-                "Miniconda3-latest-MacOSX-arm64.sh"
+                "Miniconda3-latest-MacOSX-arm64.sh",
             )
         else:
             return (
                 "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh",
-                "Miniconda3-latest-MacOSX-x86_64.sh"
+                "Miniconda3-latest-MacOSX-x86_64.sh",
             )
     else:  # Linux
         return (
             "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh",
-            "Miniconda3-latest-Linux-x86_64.sh"
+            "Miniconda3-latest-Linux-x86_64.sh",
         )
+
 
 def is_git_repo(path):
     """Check if a directory is a git repository"""
     return os.path.exists(os.path.join(path, ".git"))
+
 
 def check_git_installed():
     """Check if git is available in PATH"""
@@ -66,6 +102,7 @@ def check_git_installed():
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
+
 
 def prompt_git_installation():
     """Prompt user to install git with platform-specific instructions"""
@@ -83,43 +120,42 @@ def prompt_git_installation():
         print("   Ubuntu/Debian: sudo apt-get install git")
         print("   Fedora/RHEL: sudo yum install git")
         print("   Arch: sudo pacman -S git")
-    
+
     response = input("\nContinue setup anyway? (You can clone the repo manually later) [y/N]: ")
-    return response.lower() == 'y'
+    return response.lower() == "y"
+
 
 def get_git_remote_url(repo_path=None):
     """Get the git remote URL from the current repository"""
     if repo_path is None:
         repo_path = os.path.dirname(os.path.abspath(__file__))
-    
+
     try:
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"],
             cwd=repo_path,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
         return result.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return DEFAULT_CLONE_REPOSITORY_URL
 
+
 def get_gui_exe_url(git_url=None, version=GUI_VERSION):
     """Construct GUI exe download URL from git remote URL"""
     if git_url is None:
         git_url = get_git_remote_url()
-    
-    # Convert git URL to GitHub releases URL format
-    # Handle both https://github.com/user/repo.git and git@github.com:user/repo.git
+
     if "github.com" in git_url:
-        # Extract user/repo from URL
-        match = re.search(r'github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$', git_url)
+        match = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", git_url)
         if match:
             user, repo = match.groups()
             return f"https://github.com/{user}/{repo}/releases/download/{version}/MAPseq_Wizard.exe"
-    
-    # Return None if we can't construct the URL (e.g., not GitHub or private repo)
+
     return None
+
 
 def get_repo_path():
     """Get repository path - either current directory if in repo, or None"""
@@ -128,10 +164,12 @@ def get_repo_path():
         return script_dir
     return None
 
+
 def prompt_install_path(default_path):
     print(f"\n📁 Default Miniconda install location: {default_path}")
     custom_path = input("Enter custom install path (or press Enter to use default): ").strip()
     return custom_path if custom_path else default_path
+
 
 def install_miniconda(install_path):
     """Install Miniconda with platform-specific handling"""
@@ -141,59 +179,57 @@ def install_miniconda(install_path):
     print("🔍 Downloading Miniconda...")
     try:
         if system == "Windows":
-            # Windows: use curl if available, otherwise requests
             try:
                 subprocess.run(["curl", "-L", "-o", installer, url], check=True)
             except (subprocess.CalledProcessError, FileNotFoundError):
-                # Fallback to requests for Windows
                 response = requests.get(url, stream=True)
                 response.raise_for_status()
                 with open(installer, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
         else:
-            # macOS/Linux: use curl or wget
             try:
                 subprocess.run(["curl", "-L", "-o", installer, url], check=True)
             except (subprocess.CalledProcessError, FileNotFoundError):
                 try:
                     subprocess.run(["wget", "-O", installer, url], check=True)
                 except (subprocess.CalledProcessError, FileNotFoundError):
-                    # Fallback to requests
                     response = requests.get(url, stream=True)
                     response.raise_for_status()
                     with open(installer, "wb") as f:
                         for chunk in response.iter_content(chunk_size=8192):
                             f.write(chunk)
     except requests.RequestException as e:
-        raise RuntimeError(f"Failed to download Miniconda installer: {e}. Please check your internet connection.")
+        raise RuntimeError(
+            f"Failed to download Miniconda installer: {e}. Please check your internet connection."
+        )
 
     print(f"🔧 Installing Miniconda to: {install_path}")
-    
+
     if system == "Windows":
-        # Windows silent installation
-        subprocess.run([
-            installer,
-            "/InstallationType=JustMe",
-            "/RegisterPython=0",
-            "/AddToPath=1",
-            "/S",
-            f"/D={install_path}"
-        ], check=True)
+        subprocess.run(
+            [
+                installer,
+                "/InstallationType=JustMe",
+                "/RegisterPython=0",
+                "/AddToPath=1",
+                "/S",
+                f"/D={install_path}",
+            ],
+            check=True,
+        )
     else:
-        # macOS/Linux: make executable and run
         os.chmod(installer, 0o755)
-        subprocess.run([
-            "bash", installer, "-b", "-p", install_path, "-f"
-        ], check=True)
-        # Clean up installer
+        subprocess.run(["bash", installer, "-b", "-p", install_path, "-f"], check=True)
         try:
             os.remove(installer)
         except OSError:
             pass
 
+
 def conda(cmd, conda_exe):
     subprocess.run([conda_exe] + cmd, check=True)
+
 
 def download_gui_exe(url, target_path):
     """Download GUI exe with enhanced error handling"""
@@ -207,38 +243,46 @@ def download_gui_exe(url, target_path):
                 f.write(chunk)
         print(f"✅ GUI exe saved to: {target_path}")
     except requests.Timeout:
-        raise RuntimeError(f"Download timeout. Please check your internet connection and try again.")
+        raise RuntimeError("Download timeout. Please check your internet connection and try again.")
     except requests.RequestException as e:
-        raise RuntimeError(f"Failed to download GUI exe: {e}. You can build it manually using PyInstaller if needed.")
+        raise RuntimeError(
+            f"Failed to download GUI exe: {e}. You can build it manually using PyInstaller if needed."
+        )
+
 
 def verify_installation(conda_exe, env_name):
     """Verify that critical packages can be imported"""
     print("\n🔍 Verifying installation...")
     test_imports = [
-        "pandas", "numpy", "matplotlib", "scipy", 
-        "sklearn", "PySimpleGUI", "seaborn", "statsmodels"
+        "pandas",
+        "numpy",
+        "matplotlib",
+        "scipy",
+        "sklearn",
+        "PySimpleGUI",
+        "seaborn",
+        "statsmodels",
     ]
-    
+
     failed_imports = []
     for package in test_imports:
         try:
-            # Map package names to import names
             import_name = package
             if package == "sklearn":
                 import_name = "sklearn"
             elif package == "PySimpleGUI":
                 import_name = "PySimpleGUI"
-            
-            result = subprocess.run(
+
+            subprocess.run(
                 [conda_exe, "run", "-n", env_name, "python", "-c", f"import {import_name}"],
                 capture_output=True,
-                check=True
+                check=True,
             )
             print(f"  ✅ {package}")
         except subprocess.CalledProcessError:
             failed_imports.append(package)
             print(f"  ❌ {package} (failed to import)")
-    
+
     if failed_imports:
         print(f"\n⚠️  Warning: Some packages failed to import: {', '.join(failed_imports)}")
         print("   You may need to reinstall dependencies manually.")
@@ -247,24 +291,27 @@ def verify_installation(conda_exe, env_name):
         print("\n✅ All critical packages verified successfully!")
         return True
 
+
 def print_post_installation_instructions(repo_path):
     """Print comprehensive post-installation instructions"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📚 POST-INSTALLATION INSTRUCTIONS")
-    print("="*70)
-    
+    print("=" * 70)
+
     print("\n1️⃣  PREPROCESSING (if needed):")
     print("   Run the preprocessing script to clean and aggregate your data:")
     print("   conda activate mapseq_processing")
     print(f"   python {os.path.join(repo_path, 'preprocess_and_aggregate.py')} -i <input_dir> -o <output_dir>")
-    
+
     print("\n2️⃣  MAIN PROCESSING:")
     print("   Option A - GUI (Windows):")
     print(f"   Run MAPseq_Wizard.exe from: {repo_path}")
     print("   Option B - Command Line:")
     print("   conda activate mapseq_processing")
-    print(f"   python {os.path.join(repo_path, 'process-nbcm-tsv.py')} -o <out_dir> -s <sample> -d <data_file> -l <labels>")
-    
+    print(
+        f"   python {os.path.join(repo_path, 'process-nbcm-tsv.py')} -o <out_dir> -s <sample> -d <data_file> -l <labels>"
+    )
+
     print("\n3️⃣  HELPER SCRIPTS (run in order after main processing):")
     print("   conda activate mapseq_processing")
     helper_scripts = [
@@ -280,32 +327,36 @@ def print_post_installation_instructions(repo_path):
         "08_motif_clustering.py",
         "09_plot_normalized_projection_strength_data.py",
         "10_plot_per_cell_projection_strength_across_ages.py",
-        "13_aggregate_projection_summaries.py"
+        "13_aggregate_projection_summaries.py",
     ]
     for script in helper_scripts:
         print(f"   python {os.path.join(repo_path, 'helpers', 'scripts', script)}")
-    
+
     print("\n   Note: Scripts 05 must run before 06 and 07.")
     print("         Script 17 requires outputs from 01 and 05 (run after both).")
     print("         Script 18 requires outputs from 05.")
     print("         Script 07 must run before 08.")
-    
+
     print("\n4️⃣  BATCH EXECUTION (alternative to running scripts individually):")
     print("   conda activate mapseq_processing")
     print(f"   bash {os.path.join(repo_path, 'run_commands.sh')}")
-    print("   (Runs all_commands.txt by default; pass another file as the first argument to override.)")
-    
+    print(
+        f"   (Template {COMMANDS_TEMPLATE_BASENAME} uses {REPO_ROOT_PLACEHOLDER}; "
+        f"this wizard writes {LOCAL_COMMANDS_BASENAME} with your repo path.)"
+    )
+
     print("\n5️⃣  QUALITY CONTROL:")
     print("   conda activate mapseq_processing")
     print(f"   python {os.path.join(repo_path, 'postprocessing_checks.py')}")
-    
+
     print("\n6️⃣  FIGURE GENERATION:")
     print("   conda activate mapseq_processing")
     print(f"   python {os.path.join(repo_path, 'figure_generation', 'generate_figure_from_outputs.py')}")
-    
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
     print("📖 For detailed documentation, see README.md")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
+
 
 def create_env_and_setup(conda_exe, install_dir, repo_path=None):
     """Create conda environment and set up the repository"""
@@ -316,14 +367,16 @@ def create_env_and_setup(conda_exe, install_dir, repo_path=None):
     conda(["config", "--add", "channels", "conda-forge"], conda_exe)
     conda(["config", "--add", "channels", "bioconda"], conda_exe)
 
-    # Determine repository path
     if repo_path is None:
-        # Not in a repo, need to clone
         print("🐙 Cloning project repository...")
         git_url = get_git_remote_url()
-        repo_name = os.path.basename(git_url.rstrip('.git')) if git_url.endswith('.git') else os.path.basename(git_url)
+        repo_name = (
+            os.path.basename(git_url.rstrip(".git"))
+            if git_url.endswith(".git")
+            else os.path.basename(git_url)
+        )
         git_dir = os.path.join(install_dir, repo_name)
-        
+
         if not os.path.exists(git_dir):
             if not check_git_installed():
                 if not prompt_git_installation():
@@ -338,12 +391,11 @@ def create_env_and_setup(conda_exe, install_dir, repo_path=None):
                 return None
         else:
             print("📂 Repo already cloned.")
-        
+
         repo_path = git_dir
     else:
         print(f"📂 Using existing repository at: {repo_path}")
 
-    # Download the GUI exe into the repo directory (if available and on Windows)
     if platform.system() == "Windows":
         gui_exe_path = os.path.join(repo_path, "MAPseq_Wizard.exe")
         if not os.path.exists(gui_exe_path):
@@ -360,30 +412,121 @@ def create_env_and_setup(conda_exe, install_dir, repo_path=None):
         else:
             print(f"✅ GUI exe already exists at: {gui_exe_path}")
 
-    # Install dependencies
     requirements_path = os.path.join(repo_path, "requirements.txt")
     if os.path.exists(requirements_path):
         print("📄 Installing dependencies from requirements.txt...")
         try:
-            subprocess.run([
-                conda_exe, "run", "-n", ENV_NAME, "pip", "install", "-r", requirements_path
-            ], check=True)
+            subprocess.run(
+                [conda_exe, "run", "-n", ENV_NAME, "pip", "install", "-r", requirements_path],
+                check=True,
+            )
         except subprocess.CalledProcessError as e:
             print(f"⚠️  Warning: Some dependencies may have failed to install: {e}")
             print("   You may need to install them manually.")
     else:
         print(f"⚠️ No requirements.txt found in {repo_path}")
 
-    # Verify installation
     verify_installation(conda_exe, ENV_NAME)
-    
+
     return repo_path
+
+
+def normalize_repo_root_for_commands(repo_root):
+    root = os.path.normpath(os.path.abspath(repo_root))
+    return root.replace("\\", "/")
+
+
+def write_resolved_commands_file(repo_root):
+    template_path = os.path.join(repo_root, COMMANDS_TEMPLATE_BASENAME)
+    out_path = os.path.join(repo_root, LOCAL_COMMANDS_BASENAME)
+    with open(template_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    root = normalize_repo_root_for_commands(repo_root)
+    text = text.replace(REPO_ROOT_PLACEHOLDER, root)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return out_path
+
+
+def preflight_sample_raw_data(repo_root):
+    missing = []
+    for rel in EXPECTED_SAMPLE_RAW_FILES:
+        path = os.path.join(repo_root, rel)
+        if not os.path.isfile(path):
+            missing.append(rel)
+    return (len(missing) == 0, missing)
+
+
+def prompt_and_run_sample_batch(conda_exe, repo_root):
+    if platform.system() == "Windows":
+        print("\n📌 Optional sample batch run is not started automatically on Windows.")
+        print("   Use WSL or Git Bash from the repo root after activating the environment:")
+        print(f"   conda activate {ENV_NAME}")
+        print(f"   bash run_commands.sh {LOCAL_COMMANDS_BASENAME}")
+        return
+
+    response = input(
+        "\nWould you like to process the published sample dataset? (yes/no): "
+    ).strip().lower()
+    if response not in ("y", "yes"):
+        print("Skipping sample batch run.")
+        return
+
+    run_sh = os.path.join(repo_root, "run_commands.sh")
+    template_path = os.path.join(repo_root, COMMANDS_TEMPLATE_BASENAME)
+    if not os.path.isfile(run_sh):
+        print(f"\n❌ Missing {run_sh}. Cannot run sample batch.")
+        return
+    if not os.path.isfile(template_path):
+        print(f"\n❌ Missing {template_path}. Cannot run sample batch.")
+        return
+
+    ok, missing = preflight_sample_raw_data(repo_root)
+    if not ok:
+        print(
+            "\n❌ Published sample data files are missing. Add them under raw_data_sources/ "
+            "(see raw_data_sources/README.md)."
+        )
+        print("   Missing:")
+        for rel in missing[:20]:
+            print(f"     - {rel}")
+        if len(missing) > 20:
+            print(f"     ... and {len(missing) - 20} more.")
+        return
+
+    try:
+        local_commands = write_resolved_commands_file(repo_root)
+    except OSError as e:
+        print(f"\n❌ Could not write resolved command file: {e}")
+        return
+
+    print(f"\n▶️  Running batch via: bash run_commands.sh {LOCAL_COMMANDS_BASENAME}")
+    print(f"   Resolved commands: {local_commands}")
+    try:
+        proc = subprocess.run(
+            [
+                conda_exe,
+                "run",
+                "-n",
+                ENV_NAME,
+                "bash",
+                run_sh,
+                LOCAL_COMMANDS_BASENAME,
+            ],
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            print(f"\n⚠️  Batch run exited with status {proc.returncode}.")
+        else:
+            print("\n✅ Sample batch run finished.")
+    except OSError as e:
+        print(f"\n❌ Failed to start batch run: {e}")
+
 
 def main():
     try:
-        # Check if already in a repository
         repo_path = get_repo_path()
-        
+
         default_path = get_default_install_path()
         install_path = prompt_install_path(default_path)
 
@@ -406,14 +549,18 @@ def main():
         if not os.path.exists(conda_exe):
             raise FileNotFoundError(f"conda executable not found at {conda_exe}")
 
-        # Create environment and setup
-        final_repo_path = create_env_and_setup(conda_exe, install_dir=install_path if repo_path is None else os.path.dirname(repo_path), repo_path=repo_path)
-        
+        final_repo_path = create_env_and_setup(
+            conda_exe,
+            install_dir=install_path if repo_path is None else os.path.dirname(repo_path),
+            repo_path=repo_path,
+        )
+
         if final_repo_path:
             print("\n✅ All steps completed successfully!")
             if platform.system() == "Windows":
                 print(f"   You can now run MAPseq_Wizard.exe from: {final_repo_path}")
             print_post_installation_instructions(final_repo_path)
+            prompt_and_run_sample_batch(conda_exe, final_repo_path)
         else:
             print("\n⚠️  Setup completed with warnings. Please review the messages above.")
 
@@ -430,9 +577,11 @@ def main():
         print(f"\n⚠️  Unexpected error: {e}")
         print("   Please check the error message and try again.")
         import traceback
+
         traceback.print_exc()
 
     input("\n📝 Press Enter to exit...")
+
 
 if __name__ == "__main__":
     main()

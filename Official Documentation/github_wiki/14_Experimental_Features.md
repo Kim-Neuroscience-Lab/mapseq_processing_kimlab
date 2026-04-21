@@ -2,7 +2,7 @@
 
 ## Disclaimer
 
-The features described in this chapter are **experimental and have not been fully tested**. For production runs, use the supported workflow: make the script executable if needed (`chmod +x run_commands.sh`) and run **`./run_commands.sh`** with a command file (`all_commands.txt` or `all_commands_all-parameters.txt`). See [Chapter 1: Introduction](01_Introduction.md), [Chapter 2: Installation and Setup](02_Installation_Setup.md), and [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline.md) for the primary workflow.
+The features described in this chapter are **experimental and have not been fully tested**. For production runs, use the supported workflow: make the script executable if needed (`chmod +x run_commands.sh`) and run **`./run_commands.sh`** with a command file (`all_commands.txt` or `all_commands_all-parameters.txt`). See [Chapter 1: Introduction](01_Introduction), [Chapter 2: Installation and Setup](02_Installation_Setup), and [Chapter 4: Main Processing Pipeline](04_Main_Processing_Pipeline) for the primary workflow.
 
 ---
 
@@ -57,11 +57,11 @@ These are listed in the repository `requirements.txt`.
 6. **Review & Generate** - Review configuration and generate command files
 7. **Execute** - Run the pipeline with progress monitoring
 
-For more detail, see the [MAPseq_wizard package README](../../MAPseq_wizard/README.md) in the repository.
+For more detail, see the [MAPseq_wizard package README](https://github.com/OWNER/REPO/blob/main/MAPseq_wizard/README.md) in the repository.
 
 ### Wizard helper checklist vs full repository
 
-The **Helper Scripts** step in `MAPseq_wizard` exposes only a **subset** of helpers (e.g. 01–09, 13, 15 with dependency hints). It does **not** mirror every script under `helpers/scripts/` (e.g. optional **17** / **18**, per-cell projection plot **10**, model comparison **14**, or maintainer tools below). For the full list and batch order, use [Chapter 7: Helper Scripts](07_Helper_Scripts.md) and your edited `all_commands.txt`.
+The **Helper Scripts** step in `MAPseq_wizard` exposes only a **subset** of helpers (e.g. 01–09, 13, 15 with dependency hints). It does **not** mirror every script under `helpers/scripts/` (e.g. optional **17** / **18**, per-cell projection plot **10**, model comparison **14**, or maintainer tools below). For the full list and batch order, use [Chapter 7: Helper Scripts](07_Helper_Scripts) and your edited `all_commands.txt`.
 
 ---
 
@@ -100,4 +100,4 @@ For production and reproducible runs, use **`./run_commands.sh`** (after `chmod 
 
 ---
 
-*Return to [Chapter 1: Introduction](01_Introduction.md) or [Chapter 2: Installation and Setup](02_Installation_Setup.md) for the supported workflow.*
+*Return to [Chapter 1: Introduction](01_Introduction) or [Chapter 2: Installation and Setup](02_Installation_Setup) for the supported workflow.*

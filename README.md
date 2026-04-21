@@ -109,6 +109,33 @@ For Windows users who prefer not to use Python directly, download `Setup_Wizard.
 
 **Note:** The setup wizard detects the repository location automatically and can work with both local repositories and GitHub-hosted repositories.
 
+### setup_wizard_with_sample.py (installer + optional sample batch)
+
+Same Miniconda / conda env / `pip install -r requirements.txt` flow as `setup_wizard.py`, plus an optional prompt to run the published sample via `run_commands.sh` after setup (non-Windows; on Windows, instructions are printed).
+
+**From source (any OS with Python 3.9+):**
+
+```bash
+python setup_wizard_with_sample.py
+```
+
+**Pre-built binaries (no Python required):** Built with PyInstaller and attached to [GitHub Releases](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab/releases) when a version tag (`v*`) is pushed. Download the asset that matches your OS:
+
+| Asset | Platform |
+|--------|----------|
+| `setup_wizard_with_sample-Windows.exe` | Windows |
+| `setup_wizard_with_sample-macOS` | macOS |
+| `setup_wizard_with_sample-Linux` | Linux (x86_64, built on Ubuntu runner) |
+
+**First-run security prompts (unsigned binaries):**
+
+- **macOS:** If Gatekeeper blocks the app, use **Right-click → Open**, or **System Settings → Privacy & Security** and choose Open.
+- **Windows:** If SmartScreen appears, use **More info → Run anyway** (unless you use a signed build).
+
+**What the wizard needs:** Network access to download Miniconda (if not already installed), install Python packages, and—if you are not already inside a git clone of this repo—to `git clone` [this repository](https://github.com/Kim-Neuroscience-Lab/mapseq_processing_kimlab). The optional sample batch expects the shipped files under `raw_data_sources/`.
+
+**Maintainers:** Build locally with `pip install pyinstaller requests` and `pyinstaller setup_wizard_with_sample.spec` (see `setup_wizard_with_sample.spec`). CI workflow: `.github/workflows/build-setup-wizard-with-sample.yml`.
+
 ---
 
 7. Run the preprocessing script to clean and aggregate your replicate TSV files (see Preprocessing Scripts section below for details)
@@ -415,12 +442,12 @@ chmod +x run_commands.sh   # one-time, if needed
 
 **Features:**
 - **Automatic logging**: Creates a log file named `processing_YYYYMMDD_HHMMSS.log` with timestamp
-- **Sequential execution**: Runs commands one at a time from `all_commands.txt`
+- **Sequential execution**: Runs commands one at a time from the command file (default `all_commands.txt`)
 - **Error capture**: Captures both stdout and stderr to the log file
 - **Progress tracking**: Echoes each command to console before execution
 
 **Requirements:**
-- `all_commands.txt` file in the same directory (or modify script to specify path)
+- Command file in the repository root (default `all_commands.txt`; pass a different file as the first argument, e.g. `all_commands.local.txt` from `setup_wizard_with_sample.py`)
 - All commands in the file should be valid and executable
 
 **Example:**
@@ -428,14 +455,10 @@ chmod +x run_commands.sh   # one-time, if needed
 # From repository root
 chmod +x run_commands.sh   # one-time, if needed
 ./run_commands.sh
-
-# Or from bash directory
-cd bash
-chmod +x run_commands.sh
-./run_commands.sh
+./run_commands.sh all_commands.local.txt
 ```
 
-**Note:** The script will continue executing even if individual commands fail. Check the log file to identify any failures. The script is identical in both the root directory and `bash/` subdirectory.
+**Note:** The script will continue executing even if individual commands fail. Check the log file to identify any failures.
 
 ### Notes
 

@@ -96,7 +96,7 @@
 
 <p><strong>Critical</strong>: Run <strong>05</strong> before <strong>06</strong> and <strong>07</strong>. Run <strong>07</strong> before <strong>08</strong> and <strong>15</strong>. Helper <strong>15</strong> reads upsetplot CSVs from <code>--input_dir</code> (often a copied <code>07_input</code> tree); see your command file for <code>find</code>/<code>cp</code> steps.</p>
 <h2 id="example-batch-order">Example batch order</h2>
-<p>The repository’s <a href="../../bash/all_commands.txt"><code>bash/all_commands.txt</code></a> is the reference ordering for this project. A typical block (after all <code>process-nbcm-tsv.py</code> runs) is:</p>
+<p>The repository’s <a href="../../all_commands.txt"><code>all_commands.txt</code></a> is the reference ordering for this project. A typical block (after all <code>process-nbcm-tsv.py</code> runs) is:</p>
 <ol>
 <li><strong>01</strong>–<strong>05</strong> — cross-age tables and motif summaries  </li>
 <li><strong>18</strong> — mean JSD transition tests (reads helper <strong>05</strong> text outputs); optional  </li>
@@ -165,7 +165,7 @@ Key files: <code>combined_effect_sizes_{model}.csv</code>, <code>transition_sign
 <h2 id="script-10-command-file-per-cell-projection-strength-across-ages">Script 10 (command file): Per-cell projection strength across ages</h2>
 <p><strong>File</strong>: <code>helpers/scripts/10_plot_per_cell_projection_strength_across_ages.py</code></p>
 <p><strong>Purpose</strong>: One plot per motif with per-cell lines across p12/p20/p60 (reads <code>*ALL*_raw_data.csv</code> under each age).</p>
-<p><strong>Status</strong>: Optional visualization; appears in the repository <code>bash/all_commands.txt</code> as the script named <code>10_...</code> (not the dataset-compare script below).</p>
+<p><strong>Status</strong>: Optional visualization; appears in the repository <code>all_commands.txt</code> as the script named <code>10_...</code> (not the dataset-compare script below).</p>
 <hr />
 <h2 id="script-13-aggregate-projection-summaries">Script 13: Aggregate Projection Summaries</h2>
 <p><strong>File</strong>: <code>helpers/scripts/13_aggregate_projection_summaries.py</code></p>
